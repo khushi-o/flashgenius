@@ -1,7 +1,8 @@
 # ─── FlashGenius — never commit secrets or local-only state ───
 
-# Markdown: only docs/ARCHITECTURE.md is tracked (repo policy — other *.md stay local)
+# Markdown: README + architecture tracked; other *.md stay local
 *.md
+!README.md
 !docs/ARCHITECTURE.md
 
 # Environment and secrets (Tier A/B — see local docs/SECURITY.md)
