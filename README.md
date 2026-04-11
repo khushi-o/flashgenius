@@ -23,11 +23,8 @@ Smart flashcards from PDFs: upload a chapter or notes, get a practice-ready deck
 - **Deployment:** Vercel (frontend + serverless API).
 - **AI (optional):** server-only env vars; consider Groq or similar free tiers, plus caps (max pages, max cards). Heuristic-only path possible for $0.
 
-- **[docs/COMPLETE_REFERENCE.md](./docs/COMPLETE_REFERENCE.md)** — end-to-end spec (APIs, SM-2, generation, validation, study/progress, build order).  
-- **[docs/SECURITY.md](./docs/SECURITY.md)** — security regulations and operational plan.  
-- **[docs/PHASES.md](./docs/PHASES.md)** — phased tasks + security work per phase.  
-- **[docs/PLAN.md](./docs/PLAN.md)** — narrative build plan and card-quality system.  
-- **[docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)** — overview ER / checklist.  
+- **Local copies (gitignored, not on GitHub):** `docs/COMPLETE_REFERENCE.md`, `docs/SECURITY.md`, `docs/PHASES.md`, `docs/PLAN.md` — full spec, security rules, phased tasks, and product plan. Keep them on your machine next to the repo.  
+- **[docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)** — overview ER / checklist (tracked in git).  
 - **[supabase/migrations/001_initial_schema.sql](./supabase/migrations/001_initial_schema.sql)** — runnable schema + RLS + Storage.  
 - Copy **[.env.example](./.env.example)** to `.env.local` when implementing.
 
@@ -46,7 +43,7 @@ npm run dev
 
 **Never commit secrets** — real keys and `.env.local` stay on your machine and in the host’s env config only; the repo carries placeholders in `.env.example` (see `.gitignore`).
 
-Full regulations, classification of secrets, Git rules, and a **pre-release checklist** are in **[docs/SECURITY.md](./docs/SECURITY.md)**. Phased work—including **security tasks per phase**—is in **[docs/PHASES.md](./docs/PHASES.md)**.
+Full regulations, classification of secrets, Git rules, and a **pre-release checklist** live in your local **`docs/SECURITY.md`** (gitignored). Phased work—including **security tasks per phase**—is in local **`docs/PHASES.md`**.
 
 Summary:
 
@@ -58,7 +55,7 @@ Summary:
 
 1. **Live URL** — deployed app.
 2. **Video (2–5 min)** — walkthrough: upload → cards → study → progress; call out tradeoffs.
-3. **Write-up** — this README + `docs/ARCHITECTURE.md` + `docs/SECURITY.md` (tradeoffs and how secrets stay server-side); what you’d improve with more time.
+3. **Write-up** — this README + `docs/ARCHITECTURE.md` + your local `docs/SECURITY.md` (or equivalent summary if you keep SECURITY gitignored); tradeoffs and how secrets stay server-side; what you’d improve with more time.
 4. **Public GitHub repo** — this repository.
 
 ## License

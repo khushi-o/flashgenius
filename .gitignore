@@ -4,10 +4,12 @@
 *.md
 !README.md
 !docs/ARCHITECTURE.md
-!docs/PHASES.md
-!docs/PLAN.md
-!docs/SECURITY.md
-!docs/COMPLETE_REFERENCE.md
+
+# Spec / process docs — keep local only (not in public clone)
+docs/COMPLETE_REFERENCE.md
+docs/PHASES.md
+docs/PLAN.md
+docs/SECURITY.md
 
 # Environment and secrets (Tier A/B — see local docs/SECURITY.md)
 .env
