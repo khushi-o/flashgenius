@@ -31,9 +31,7 @@ Smart flashcards from PDFs: upload a chapter or notes, get a practice-ready deck
 - **[supabase/migrations/001_initial_schema.sql](./supabase/migrations/001_initial_schema.sql)** — runnable schema + RLS + Storage.  
 - Copy **[.env.example](./.env.example)** to `.env.local` when implementing.
 
-## Local development (placeholder)
-
-Once the app is scaffolded:
+## Local development
 
 ```bash
 npm install
@@ -42,9 +40,11 @@ cp .env.example .env.local
 npm run dev
 ```
 
-`.env.example` will list required variables when implementation lands.
+`.env.example` lists variables used as features land (Supabase, LLM, optional caps).
 
 ## Security (submission requirement)
+
+**Never commit secrets** — real keys and `.env.local` stay on your machine and in the host’s env config only; the repo carries placeholders in `.env.example` (see `.gitignore`).
 
 Full regulations, classification of secrets, Git rules, and a **pre-release checklist** are in **[docs/SECURITY.md](./docs/SECURITY.md)**. Phased work—including **security tasks per phase**—is in **[docs/PHASES.md](./docs/PHASES.md)**.
 
