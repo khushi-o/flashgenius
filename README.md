@@ -43,6 +43,8 @@ npm run dev
 4. **Authentication → URL configuration:** set **Site URL** to `http://localhost:3000` (and your production URL later). Under **Redirect URLs**, add `http://localhost:3000/auth/callback` and the same for production.  
 5. Put **Project URL** and **anon public** key into `.env.local` as `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Do **not** put the service role key in the client; use it only in server code if you truly need it.
 
+**Demo PDFs on the home page** live in `public/demo/`. Regenerate anytime with `npm run demo-pdfs` (requires `pdf-lib`).
+
 ## License
 
 TBD.

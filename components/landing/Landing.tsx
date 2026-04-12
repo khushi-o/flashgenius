@@ -1,31 +1,33 @@
 import Link from "next/link";
+import { DemoPdfSection } from "./DemoPdfSection";
 import { FlipDemo } from "./FlipDemo";
 
 function BookIcon() {
   return (
-    <svg
-      width="22"
-      height="22"
-      viewBox="0 0 24 24"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden
-    >
-      <path
-        d="M6 3h9a2 2 0 012 2v16H8a2 2 0 00-2-2V3zm0 0v14a2 2 0 002 2h11"
-        stroke="#534AB7"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M6 3H5a2 2 0 00-2 2v14a2 2 0 002 2h1"
-        stroke="#534AB7"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+    <span className="landing-logo-icon" aria-hidden>
+      <svg
+        width="22"
+        height="22"
+        viewBox="0 0 24 24"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M6 3h9a2 2 0 012 2v16H8a2 2 0 00-2-2V3zm0 0v14a2 2 0 002 2h11"
+          stroke="currentColor"
+          strokeWidth="1.75"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M6 3H5a2 2 0 00-2 2v14a2 2 0 002 2h1"
+          stroke="currentColor"
+          strokeWidth="1.75"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </span>
   );
 }
 
@@ -117,6 +119,8 @@ export function Landing() {
           </div>
         </div>
       </div>
+
+      <DemoPdfSection />
     </div>
   );
 }

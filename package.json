@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "demo-pdfs": "node scripts/generate-demo-pdfs.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.2",
@@ -22,6 +23,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.3",
+    "pdf-lib": "^1.17.1",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
