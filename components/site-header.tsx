@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { signOut } from "@/app/login/actions";
+import { signOut } from "@/lib/actions/auth";
 import { createClient } from "@/lib/supabase/server";
 
 export async function SiteHeader() {
