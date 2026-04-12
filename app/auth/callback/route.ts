@@ -1,26 +1,46 @@
-import { createClient } from "@/lib/supabase/server";
-import { NextResponse } from "next/server";
+import { safeNextPath } from "@/lib/auth/safe-next";
+import { createServerClient } from "@supabase/ssr";
+import { NextResponse, type NextRequest } from "next/server";
 
-export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
-  const code = searchParams.get("code");
-  const nextPath = searchParams.get("next") ?? "/decks";
+export async function GET(request: NextRequest) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const requestUrl = new URL(request.url);
+  const code = requestUrl.searchParams.get("code");
+  const nextPath = safeNextPath(requestUrl.searchParams.get("next"));
+  const origin = requestUrl.origin;
 
-  if (code) {
-    const supabase = await createClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) {
-      const forwardedHost = request.headers.get("x-forwarded-host");
-      const isLocal = process.env.NODE_ENV === "development";
-      if (isLocal) {
-        return NextResponse.redirect(`${origin}${nextPath}`);
-      }
-      if (forwardedHost) {
-        return NextResponse.redirect(`https://${forwardedHost}${nextPath}`);
-      }
-      return NextResponse.redirect(`${origin}${nextPath}`);
-    }
+  if (!url || !anon) {
+    return NextResponse.redirect(`${origin}/login?error=missing_env`);
   }
 
-  return NextResponse.redirect(`${origin}/login?error=auth`);
+  if (!code) {
+    return NextResponse.redirect(`${origin}/login?error=auth`);
+  }
+
+  const redirectTarget = `${origin}${nextPath}`;
+  const response = NextResponse.redirect(redirectTarget);
+
+  const supabase = createServerClient(url, anon, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
+      },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value, options }) =>
+          response.cookies.set(name, value, options),
+        );
+      },
+    },
+  });
+
+  const { error } = await supabase.auth.exchangeCodeForSession(code);
+
+  if (error) {
+    return NextResponse.redirect(
+      `${origin}/login?error=${encodeURIComponent(error.message)}`,
+    );
+  }
+
+  return response;
 }
