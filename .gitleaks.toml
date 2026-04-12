@@ -1,0 +1,5 @@
+# Gitleaks — extends built-in rules; see https://github.com/gitleaks/gitleaks
+title = "FlashGenius"
+
+[extend]
+useDefault = true
