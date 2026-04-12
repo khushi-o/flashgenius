@@ -35,6 +35,14 @@ cp .env.example .env.local
 npm run dev
 ```
 
+### Supabase (Phase 1)
+
+1. Create a project at [supabase.com](https://supabase.com).  
+2. In **SQL Editor**, run [`supabase/migrations/001_initial_schema.sql`](./supabase/migrations/001_initial_schema.sql) (schema, RLS, `pdfs` bucket).  
+3. **Authentication → Providers:** enable **Email** (magic link) and **Google** (add OAuth client id/secret from Google Cloud Console).  
+4. **Authentication → URL configuration:** set **Site URL** to `http://localhost:3000` (and your production URL later). Under **Redirect URLs**, add `http://localhost:3000/auth/callback` and the same for production.  
+5. Put **Project URL** and **anon public** key into `.env.local` as `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Do **not** put the service role key in the client; use it only in server code if you truly need it.
+
 ## License
 
 TBD.
