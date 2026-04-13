@@ -6,9 +6,9 @@ import { usePathname } from "next/navigation";
 
 function navButtonClass(active: boolean) {
   if (active) {
-    return "tap-scale inline-flex min-h-11 min-w-[2.75rem] items-center gap-2 rounded-xl border border-p-sage/45 bg-p-sage/15 px-4 py-2.5 text-sm font-semibold text-p-cream shadow-inner shadow-black/20 transition-[background-color,border-color,color] duration-150 [-webkit-tap-highlight-color:transparent]";
+    return "tap-scale inline-flex min-h-11 min-w-[2.75rem] items-center gap-2 rounded-xl border border-p-sage/45 bg-p-sage/15 px-4 py-2.5 text-sm font-semibold text-p-cream shadow-inner shadow-black/20 transition-[background-color,border-color,color,transform] duration-150 hover:bg-p-sage/22 hover:brightness-105 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-p-sage/40 [-webkit-tap-highlight-color:transparent]";
   }
-  return "tap-scale inline-flex min-h-11 min-w-[2.75rem] items-center gap-2 rounded-xl border border-p-sand/20 bg-p-navy-mid/60 px-4 py-2.5 text-sm font-medium text-p-sand transition-[background-color,border-color,color] duration-150 hover:border-p-sage/30 hover:bg-p-navy-mid hover:text-p-cream [-webkit-tap-highlight-color:transparent]";
+  return "tap-scale inline-flex min-h-11 min-w-[2.75rem] items-center gap-2 rounded-xl border border-p-sand/20 bg-p-navy-mid/60 px-4 py-2.5 text-sm font-medium text-p-sand transition-[background-color,border-color,color,box-shadow,transform] duration-150 hover:border-p-sage/35 hover:bg-p-navy-mid hover:text-p-cream hover:shadow-md hover:shadow-black/15 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-p-sage/30 [-webkit-tap-highlight-color:transparent]";
 }
 
 export function SiteHeaderNav() {
@@ -66,19 +66,19 @@ export function SiteHeaderNav() {
       <nav className="flex items-center gap-2 md:hidden" aria-label="Main mobile">
         <Link
           href="/decks"
-          className={`tap-scale inline-flex min-h-11 min-w-[4.25rem] items-center justify-center rounded-lg px-3 py-2 text-xs font-semibold transition-colors duration-150 [-webkit-tap-highlight-color:transparent] ${libraryActive ? "bg-p-sage/25 text-p-cream" : "text-p-sand-dim hover:bg-p-sage/10 hover:text-p-cream"}`}
+          className={`tap-scale inline-flex min-h-11 min-w-[4.25rem] items-center justify-center rounded-lg px-3 py-2 text-xs font-semibold transition-[background-color,color,transform] duration-150 active:scale-[0.98] [-webkit-tap-highlight-color:transparent] ${libraryActive ? "bg-p-sage/25 text-p-cream hover:bg-p-sage/30" : "text-p-sand-dim hover:bg-p-sage/12 hover:text-p-cream"}`}
         >
           Library
         </Link>
         <Link
           href="/study"
-          className={`tap-scale inline-flex min-h-11 min-w-[4.25rem] items-center justify-center rounded-lg px-3 py-2 text-xs font-semibold transition-colors duration-150 [-webkit-tap-highlight-color:transparent] ${studyActive ? "bg-p-sage/25 text-p-cream" : "text-p-sand-dim hover:bg-p-sage/10 hover:text-p-cream"}`}
+          className={`tap-scale inline-flex min-h-11 min-w-[4.25rem] items-center justify-center rounded-lg px-3 py-2 text-xs font-semibold transition-[background-color,color,transform] duration-150 active:scale-[0.98] [-webkit-tap-highlight-color:transparent] ${studyActive ? "bg-p-sage/25 text-p-cream hover:bg-p-sage/30" : "text-p-sand-dim hover:bg-p-sage/12 hover:text-p-cream"}`}
         >
           Study
         </Link>
         <Link
           href="/decks/new"
-          className={`tap-scale inline-flex min-h-11 min-w-[4.25rem] items-center justify-center rounded-lg px-3 py-2 text-xs font-semibold transition-colors duration-150 [-webkit-tap-highlight-color:transparent] ${uploadActive ? "bg-p-sage/25 text-p-cream" : "text-p-sand-dim hover:bg-p-sage/10 hover:text-p-cream"}`}
+          className={`tap-scale inline-flex min-h-11 min-w-[4.25rem] items-center justify-center rounded-lg px-3 py-2 text-xs font-semibold transition-[background-color,color,transform] duration-150 active:scale-[0.98] [-webkit-tap-highlight-color:transparent] ${uploadActive ? "bg-p-sage/25 text-p-cream hover:bg-p-sage/30" : "text-p-sand-dim hover:bg-p-sage/12 hover:text-p-cream"}`}
         >
           Upload
         </Link>
@@ -87,7 +87,7 @@ export function SiteHeaderNav() {
       <form action={signOut} className="shrink-0">
         <button
           type="submit"
-          className="tap-scale min-h-11 rounded-lg px-4 text-sm text-p-sand-dim transition-colors duration-150 hover:bg-p-sage/10 hover:text-p-cream active:bg-p-sage/15 [-webkit-tap-highlight-color:transparent]"
+          className="tap-scale min-h-11 rounded-lg px-4 text-sm text-p-sand-dim transition-[background-color,color,transform] duration-150 hover:bg-p-sage/10 hover:text-p-cream active:scale-[0.98] active:bg-p-sage/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-p-sage/30 [-webkit-tap-highlight-color:transparent]"
         >
           Sign out
         </button>

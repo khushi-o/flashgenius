@@ -45,14 +45,17 @@ export function LibraryGreeting({ initialDisplayName }: Props) {
 
   if (savedName && !editing) {
     return (
-      <div className="mt-2 flex flex-wrap items-center gap-2 sm:gap-3">
-        <div className="flex items-center gap-2 text-p-cream">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-p-sage/30 bg-p-sage/10 text-p-sage-bright">
+      <div className="mt-1 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
+        <div className="flex min-w-0 items-start gap-3">
+          <span className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-p-sage/30 bg-p-sage/10 text-p-sage-bright">
             <UserCircleIcon className="h-5 w-5" />
           </span>
-          <p className="text-base font-medium sm:text-lg">
-            Hi, <span className="text-p-sage-bright">{savedName}</span>
-          </p>
+          <div className="min-w-0">
+            <h1 className="text-3xl font-semibold tracking-tight text-p-cream">
+              Hey there, <span className="text-p-sage-bright">{savedName}</span>
+            </h1>
+            <p className="mt-1 text-base text-p-sand-dim sm:text-lg">{"Here's your library."}</p>
+          </div>
         </div>
         <button
           type="button"
@@ -61,7 +64,7 @@ export function LibraryGreeting({ initialDisplayName }: Props) {
             setDraft(savedName);
             setErr(null);
           }}
-          className="tap-scale text-xs font-medium text-p-sand-dim underline decoration-p-sand/40 underline-offset-2 transition-colors hover:text-p-sage-bright [-webkit-tap-highlight-color:transparent]"
+          className="tap-scale self-start text-xs font-medium text-p-sand-dim underline decoration-p-sand/40 underline-offset-2 transition-colors hover:text-p-sage-bright sm:mt-3 [-webkit-tap-highlight-color:transparent]"
         >
           Change
         </button>
@@ -70,9 +73,18 @@ export function LibraryGreeting({ initialDisplayName }: Props) {
   }
 
   return (
-    <div className="mt-3 max-w-md">
-      <label className="block text-sm font-medium text-p-sand-dim" htmlFor="library-display-name">
-        What should we call you?
+    <div className="mt-0 max-w-md">
+      <h1 className="text-3xl font-semibold tracking-tight text-p-cream">Your library</h1>
+      <p className="mt-1 text-sm text-p-sand-dim sm:text-base">
+        {editing
+          ? "Update the name we use when we greet you."
+          : "Tell us what to call you. You can change this anytime."}
+      </p>
+      <label
+        className="mt-3 block text-sm font-medium text-p-sand-dim"
+        htmlFor="library-display-name"
+      >
+        {editing ? "Name" : "What should we call you?"}
       </label>
       <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-stretch">
         <input

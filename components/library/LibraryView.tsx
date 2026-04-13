@@ -62,7 +62,12 @@ function statusPill(status: string) {
 }
 
 function outlineBtnClass(extra?: string) {
-  return `tap-scale inline-flex min-h-11 min-w-[2.75rem] items-center justify-center rounded-xl border border-p-sand/20 bg-p-navy-mid/50 px-4 py-2.5 text-xs font-semibold text-p-cream transition-[background-color,border-color,color] duration-150 hover:border-p-sage/35 hover:bg-p-navy/70 active:bg-p-navy-mid [-webkit-tap-highlight-color:transparent] ${extra ?? ""}`;
+  return `tap-scale inline-flex min-h-11 min-w-[2.75rem] items-center justify-center rounded-xl border border-p-sand/20 bg-p-navy-mid/50 px-4 py-2.5 text-xs font-semibold text-p-cream shadow-sm shadow-black/5 transition-[background-color,border-color,color,box-shadow,transform] duration-150 hover:border-p-sage/40 hover:bg-p-navy/75 hover:text-p-cream hover:shadow-md hover:shadow-black/15 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-p-sage/35 [-webkit-tap-highlight-color:transparent] ${extra ?? ""}`;
+}
+
+/** Same weight as Book / All cards by default; fills sage on hover (primary CTA without always shouting). */
+function studyDeckBtnClass() {
+  return "tap-scale inline-flex min-h-11 min-w-[2.75rem] items-center justify-center rounded-xl border border-p-sand/20 bg-p-navy-mid/50 px-4 py-2.5 text-xs font-semibold text-p-cream shadow-sm shadow-black/5 transition-[background-color,border-color,color,box-shadow,filter,transform] duration-150 hover:border-transparent hover:bg-gradient-to-r hover:from-p-sage hover:to-p-sage-muted hover:text-p-navy hover:shadow-md hover:shadow-black/25 hover:brightness-105 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-p-sage/40 [-webkit-tap-highlight-color:transparent]";
 }
 
 export function LibraryView({
@@ -123,7 +128,6 @@ export function LibraryView({
     <div className="mx-auto flex min-h-[calc(100dvh-3.5rem)] w-full max-w-6xl flex-1 flex-col px-4 pb-16 pt-8 sm:px-8 lg:px-12">
       <header className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0 flex-1">
-          <h1 className="text-3xl font-semibold tracking-tight text-p-cream">Your library</h1>
           <LibraryGreeting key={displayName ?? "__none"} initialDisplayName={displayName} />
         </div>
         <div className="flex flex-col gap-3 sm:items-end">
@@ -148,12 +152,12 @@ export function LibraryView({
               placeholder="Search decks…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="w-full rounded-xl border border-p-sand/15 bg-p-navy-mid/70 py-2.5 pl-10 pr-3 text-sm text-p-cream placeholder:text-p-sand-dim focus:border-p-sage/50 focus:outline-none focus:ring-1 focus:ring-p-sage/30"
+              className="w-full rounded-xl border border-p-sand/15 bg-p-navy-mid/70 py-2.5 pl-10 pr-3 text-sm text-p-cream shadow-sm shadow-black/5 transition-[border-color,box-shadow] placeholder:text-p-sand-dim hover:border-p-sand/25 focus:border-p-sage/50 focus:outline-none focus:ring-2 focus:ring-p-sage/30"
             />
           </div>
           <Link
             href="/decks/new"
-            className="tap-scale inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-p-sage to-p-sage-muted px-5 py-3 text-sm font-semibold text-p-navy shadow-lg shadow-black/30 hover:brightness-105 sm:w-auto [-webkit-tap-highlight-color:transparent]"
+            className="tap-scale inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-p-sage/30 bg-gradient-to-r from-p-sage to-p-sage-muted px-5 py-3 text-sm font-semibold text-p-navy shadow-lg shadow-black/30 transition-[filter,transform,box-shadow] duration-150 hover:brightness-110 hover:shadow-xl hover:shadow-black/35 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-p-sage/50 sm:w-auto [-webkit-tap-highlight-color:transparent]"
           >
             <span className="text-lg leading-none">+</span>
             New deck
@@ -231,7 +235,7 @@ export function LibraryView({
                     ) : null}
                     <Link
                       href={`/study?deck_id=${encodeURIComponent(d.id)}`}
-                      className="tap-scale inline-flex min-h-11 items-center justify-center rounded-xl bg-gradient-to-r from-p-sage to-p-sage-muted px-5 py-2.5 text-xs font-semibold text-p-navy shadow-sm shadow-black/20 transition-[filter,transform] duration-150 hover:brightness-105 [-webkit-tap-highlight-color:transparent]"
+                      className={studyDeckBtnClass()}
                     >
                       Study now
                     </Link>

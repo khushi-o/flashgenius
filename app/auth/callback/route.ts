@@ -1,4 +1,5 @@
 import { safeNextPath } from "@/lib/auth/safe-next";
+import { syncProfileDisplayNameFromUser } from "@/lib/auth/sync-profile-display-name";
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
@@ -40,6 +41,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(
       `${origin}/login?error=${encodeURIComponent(error.message)}`,
     );
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user) {
+    await syncProfileDisplayNameFromUser(supabase, user);
   }
 
   return response;

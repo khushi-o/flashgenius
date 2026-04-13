@@ -10,6 +10,7 @@ type Props = { nextPath: string; devQuickLoginEnabled?: boolean };
 export function LoginForms({ nextPath, devQuickLoginEnabled }: Props) {
   const router = useRouter();
   const [email, setEmail] = useState("");
+  const [preferredName, setPreferredName] = useState("");
   const [busy, setBusy] = useState<null | "email" | "google" | "dev">(null);
   const [localError, setLocalError] = useState<string | null>(null);
 
@@ -28,9 +29,13 @@ export function LoginForms({ nextPath, devQuickLoginEnabled }: Props) {
     setBusy("email");
     try {
       const supabase = createClient();
+      const nameTrim = preferredName.trim().slice(0, 80);
       const { error } = await supabase.auth.signInWithOtp({
         email: trimmed,
-        options: { emailRedirectTo: buildCallbackUrl() },
+        options: {
+          emailRedirectTo: buildCallbackUrl(),
+          ...(nameTrim ? { data: { display_name: nameTrim } } : {}),
+        },
       });
       if (error) {
         setLocalError(error.message);
@@ -97,6 +102,20 @@ export function LoginForms({ nextPath, devQuickLoginEnabled }: Props) {
             onChange={(e) => setEmail(e.target.value)}
             className="mt-1.5 w-full rounded-xl border border-p-sand/20 bg-p-navy-deep/80 px-3 py-2.5 text-sm text-p-cream shadow-inner outline-none ring-p-sage/30 placeholder:text-p-sand-dim focus:border-p-sage/50 focus:ring-2"
             placeholder="you@example.com"
+          />
+        </label>
+        <label className="text-sm font-medium text-p-sand">
+          What should we call you?{" "}
+          <span className="font-normal text-p-sand-dim">(optional)</span>
+          <input
+            name="preferred_name"
+            type="text"
+            autoComplete="nickname"
+            maxLength={80}
+            value={preferredName}
+            onChange={(e) => setPreferredName(e.target.value)}
+            className="mt-1.5 w-full rounded-xl border border-p-sand/20 bg-p-navy-deep/80 px-3 py-2.5 text-sm text-p-cream shadow-inner outline-none ring-p-sage/30 placeholder:text-p-sand-dim focus:border-p-sage/50 focus:ring-2"
+            placeholder="Your name"
           />
         </label>
         <button

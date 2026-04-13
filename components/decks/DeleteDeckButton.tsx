@@ -45,7 +45,7 @@ export function DeleteDeckButton({
 
   const className =
     variant === "outline"
-      ? "tap-scale inline-flex min-h-11 items-center justify-center rounded-xl border border-red-900/45 bg-transparent px-4 py-2.5 text-xs font-semibold text-red-200/95 transition-[background-color,border-color,color] duration-150 hover:bg-red-950/35 active:bg-red-950/50 disabled:opacity-50 [-webkit-tap-highlight-color:transparent]"
+      ? "tap-scale inline-flex min-h-11 items-center justify-center rounded-xl border border-red-900/45 bg-transparent px-4 py-2.5 text-xs font-semibold text-red-200/95 shadow-sm shadow-black/5 transition-[background-color,border-color,color,box-shadow,transform] duration-150 hover:border-red-400/35 hover:bg-red-950/40 hover:shadow-md hover:shadow-black/15 active:scale-[0.98] active:bg-red-950/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/40 disabled:opacity-50 [-webkit-tap-highlight-color:transparent]"
       : compact
         ? "tap-scale inline-flex min-h-10 items-center justify-center rounded-lg border border-red-900/50 bg-red-950/40 px-3 py-2 text-[11px] font-semibold text-red-200 transition-colors duration-150 hover:bg-red-900/50 active:bg-red-900/60 disabled:opacity-50 [-webkit-tap-highlight-color:transparent]"
         : "tap-scale inline-flex min-h-11 items-center justify-center rounded-xl border border-red-900/50 bg-red-950/40 px-4 py-2.5 text-sm font-semibold text-red-100 transition-colors duration-150 hover:bg-red-900/50 active:bg-red-900/60 disabled:opacity-50 [-webkit-tap-highlight-color:transparent]";
