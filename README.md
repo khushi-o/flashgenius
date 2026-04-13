@@ -113,5 +113,5 @@ Hungry for diagrams, threat model notes, and a security checklist? That lives in
 ---
 
 ## License
+[MIT](./LICENSE)
 
-TBD.
