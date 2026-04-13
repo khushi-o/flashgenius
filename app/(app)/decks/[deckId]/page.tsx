@@ -68,7 +68,7 @@ export default async function DeckDetailPage({ params }: Props) {
 
   if (cErr) {
     return (
-      <div className="mx-auto flex min-h-[calc(100dvh-3.5rem)] w-full max-w-6xl flex-1 px-4 py-16 sm:px-8 lg:px-12">
+      <div className="mx-auto max-w-2xl px-6 py-16">
         <p className="rounded-lg border border-red-900/60 bg-red-950/50 px-4 py-3 text-sm text-red-200">
           Could not load cards: {cErr.message}
         </p>
@@ -163,7 +163,7 @@ export default async function DeckDetailPage({ params }: Props) {
   );
 
   return (
-    <div className="mx-auto flex min-h-[calc(100dvh-3.5rem)] w-full max-w-6xl flex-1 px-4 py-10 sm:px-8 lg:px-12">
+    <div className="mx-auto w-full max-w-2xl flex-1 px-6 py-10">
       <BackToLibraryLink className="-ml-1" />
 
       <div className="mt-4 flex flex-wrap items-start justify-between gap-3">
