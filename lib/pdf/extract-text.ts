@@ -18,6 +18,20 @@ function isNonEmpty(out: { fullText: string; pages: PdfPageText[] }): boolean {
   return out.pages.length > 0 || out.fullText.trim().length > 0;
 }
 
+/** Vercel logs often truncate `console` output — log a structured object instead. */
+function serializeEngineError(e: unknown): Record<string, unknown> {
+  if (!(e instanceof Error)) return { value: String(e) };
+  const o: Record<string, unknown> = { name: e.name, message: e.message };
+  if (e.stack) o.stackPreview = e.stack.slice(0, 2500);
+  if (e.cause !== undefined) {
+    o.cause =
+      e.cause instanceof Error
+        ? { name: e.cause.name, message: e.cause.message }
+        : String(e.cause);
+  }
+  return o;
+}
+
 async function extractWithPdfjsModule(
   pdfjs: PdfjsModule,
   buffer: Buffer,
@@ -164,6 +178,12 @@ export async function extractPdfText(buffer: Buffer): Promise<PdfExtractOutcome>
   }
 
   let lastPdfjsThrow: unknown;
+  /**
+   * `disableFontFace: false` loads real font faces and often needs native canvas on Node.
+   * On Vercel that path frequently throws opaque errors (e.g. message "F") while
+   * `disableFontFace: true` is stable — skip the risky pass there.
+   */
+  const skipFontFacePass = process.env.VERCEL === "1" || process.env.PDFJS_SKIP_FONT_FACE === "1";
   const pdfjsAttempts: Array<{
     label: string;
     load: () => Promise<PdfjsModule>;
@@ -174,11 +194,15 @@ export async function extractPdfText(buffer: Buffer): Promise<PdfExtractOutcome>
       load: () => import("pdfjs-dist/legacy/build/pdf.mjs"),
       disableFontFace: true,
     },
-    {
-      label: "pdfjs-legacy+fontFace",
-      load: () => import("pdfjs-dist/legacy/build/pdf.mjs"),
-      disableFontFace: false,
-    },
+    ...(skipFontFacePass
+      ? []
+      : [
+          {
+            label: "pdfjs-legacy+fontFace",
+            load: () => import("pdfjs-dist/legacy/build/pdf.mjs"),
+            disableFontFace: false,
+          },
+        ]),
   ];
 
   for (const att of pdfjsAttempts) {
@@ -191,7 +215,7 @@ export async function extractPdfText(buffer: Buffer): Promise<PdfExtractOutcome>
       }
     } catch (e) {
       lastPdfjsThrow = e;
-      console.warn(`[pdf] ${att.label} failed`, e);
+      console.warn(`[pdf] ${att.label} failed`, serializeEngineError(e));
     }
   }
 
@@ -205,7 +229,8 @@ export async function extractPdfText(buffer: Buffer): Promise<PdfExtractOutcome>
         ? lastPdfjsThrow
         : new Error(String(lastPdfjsThrow), { cause: lastPdfjsThrow });
     }
-    console.error("[pdf] non-fatal engine failure — returning empty (see Vercel logs)", lastPdfjsThrow, {
+    console.error("[pdf] non-fatal engine failure — returning empty", {
+      err: serializeEngineError(lastPdfjsThrow),
       bytes: working.length,
       headerHex: working.subarray(0, Math.min(32, working.length)).toString("hex"),
     });
