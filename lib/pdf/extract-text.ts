@@ -1,3 +1,4 @@
+import "@/lib/pdf/install-pdfjs-node-polyfills";
 import { maxPdfPagesStored } from "@/lib/constants/uploads";
 import { slicePdfFromDetectedHeader } from "@/lib/pdf/is-pdf";
 import { isPdfExtractFatalError } from "@/lib/pdf/pdf-extract-user-message";
