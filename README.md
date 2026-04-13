@@ -55,6 +55,17 @@ npm run dev
 2. After a deck is **`ready`** (upload + extraction done), open **Library** and click **Generate cards** for that deck.  
 3. Optional: **`GENERATION_MAX_CHUNKS`**, **`MAX_CARDS_PER_DECK`**, **`DEDUPE_SIMILARITY_THRESHOLD`** to cap cost and near-duplicate fronts.
 
+## Production (Vercel)
+
+1. Create a Vercel project from this repo; set the **framework** to Next.js and use the default build (`npm run build`).  
+2. In **Vercel → Settings → Environment Variables**, copy everything you use locally from [`.env.example`](./.env.example), at minimum:  
+   - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`  
+   - `NEXT_PUBLIC_APP_URL` → your production origin (e.g. `https://your-app.vercel.app`) — used for absolute links and auth redirects.  
+   - `GEMINI_API_KEY` (or your chosen `LLM_PROVIDER` keys) on the **server** only — never `NEXT_PUBLIC_*` for model keys.  
+3. In **Supabase → Authentication → URL configuration**, set **Site URL** to the same production origin and add **`https://your-app.vercel.app/auth/callback`** (and `/login` if you use email magic links) under **Redirect URLs**.  
+4. Before inviting real users, walk **[§11 Security checklist in docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md#11-security-checklist)** and extend it with any org-specific items (secret scan, key rotation, rate limits).  
+5. Phase 6 product artifacts (screenshots, Loom) live outside the repo; capture them after the deploy is stable.
+
 ## License
 
 TBD.

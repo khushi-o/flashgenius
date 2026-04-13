@@ -1,5 +1,7 @@
-import Link from "next/link";
 import { safeNextPath } from "@/lib/auth/safe-next";
+import { createClient } from "@/lib/supabase/server";
+import Link from "next/link";
+import { redirect } from "next/navigation";
 import { LoginForms } from "./login-forms";
 import "./login.css";
 
@@ -11,7 +13,6 @@ type Props = {
   }>;
 };
 
-/** After sign-in, land on upload flow with a welcome cue unless `next` was explicit. */
 const DEFAULT_POST_LOGIN = "/decks/new?welcome=1";
 
 export default async function LoginPage({ searchParams }: Props) {
@@ -23,6 +24,14 @@ export default async function LoginPage({ searchParams }: Props) {
       process.env.DEV_LOGIN_EMAIL?.trim() && process.env.DEV_LOGIN_PASSWORD,
     );
 
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user) {
+    redirect(nextPath);
+  }
+
   return (
     <div className="fg-login-root">
       <div className="fg-login-grid">
@@ -31,8 +40,7 @@ export default async function LoginPage({ searchParams }: Props) {
             <span>◆</span> Learn, not cram
           </p>
           <h1>
-            Turn notes into{" "}
-            <span>cards that stick</span>
+            Turn notes into <span>cards that stick</span>
           </h1>
           <p>
             Sign in once. Right after, you&apos;ll drop in a PDF and we&apos;ll prep it for

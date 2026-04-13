@@ -1,5 +1,8 @@
 -- FlashGenius initial schema + RLS + storage policies
 -- Run via Supabase CLI or paste into SQL Editor (order matters).
+-- On an existing project: run ONCE only. If you see "relation ... already exists", the DB
+-- already has this schema — do not re-paste this file. For storage-only repair see
+-- ../snippets/storage_pdfs_policies_idempotent.sql
 
 create extension if not exists "pgcrypto";
 

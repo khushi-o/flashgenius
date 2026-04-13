@@ -69,11 +69,13 @@ export function buildPassBBatchPrompt(concepts: PassAConcept[], tone: TonePreset
 
 Each object must have:
 - "card_type": same as input concept's card_type
-- "front": clear SRS prompt (question or cloze with ___ for the blank)
-- "back": accurate concise answer
+- "front": a clear recall target: often a short question, but for definitions a crisp prompt or "Explain: …" is fine; cloze uses ___ for the blank.
+- "back": accurate and concise, but not sterile: when helpful, add one short memory hook, contrast, or micro-step (one line) so it feels like a good tutor — not only a bare fact.
 - "difficulty": 1 | 2 | 3
 - "importance": 1 | 2 | 3 (copy from concept if sensible)
 - "source_hint": short string (may echo input)
+
+Vary rhythm across the batch: do not make every front identical ("What is…?"). Mix prompts, cloze, and short "Why / How" stems where the concept fits.
 
 Style: ${t.pass_b_style}
 ${VOCABULARY_POLICY}

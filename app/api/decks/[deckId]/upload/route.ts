@@ -1,7 +1,8 @@
 import { requireSessionUser } from "@/lib/api/route-auth";
-import { chunkCharTarget, chunkOverlapChars, maxUploadBytes } from "@/lib/constants/uploads";
+import { chunkCharTarget, chunkOverlapChars, maxPdfPagesStored, maxUploadBytes } from "@/lib/constants/uploads";
+import { isMissingDeckPagesRelationError } from "@/lib/supabase/deck-pages-errors";
 import { chunkPlainText } from "@/lib/pdf/chunk-plaintext";
-import { extractTextFromPdf } from "@/lib/pdf/extract-text";
+import { extractPdfText } from "@/lib/pdf/extract-text";
 import { isPdfBuffer } from "@/lib/pdf/is-pdf";
 import { sanitizeFilenameSegment } from "@/lib/pdf/sanitize-filename";
 import { stripNulBytes } from "@/lib/pdf/sanitize-pg-text";
@@ -9,7 +10,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 function maxChunks(): number {
   const raw = process.env.MAX_CHUNKS_PER_DECK;
@@ -146,8 +147,27 @@ export async function POST(request: Request, ctx: Ctx) {
       .eq("user_id", user.id);
 
     let text: string;
+    let pageRows: { page_number: number; content: string }[] = [];
     try {
-      text = await extractTextFromPdf(buf);
+      const extracted = await extractPdfText(buf);
+      text = extracted.fullText;
+      const cap = maxPdfPagesStored();
+      const maxChars = 120_000;
+      pageRows = extracted.pages
+        .filter((p) => p.text.length > 0)
+        .slice(0, cap)
+        .map((p) => ({
+          page_number: p.pageNumber,
+          content: stripNulBytes(p.text).slice(0, maxChars),
+        }));
+      if (!pageRows.length && text.length > 0) {
+        pageRows = [
+          {
+            page_number: 1,
+            content: stripNulBytes(text).slice(0, maxChars),
+          },
+        ];
+      }
     } catch (extractErr) {
       await setDeckError(
         supabase,
@@ -188,6 +208,30 @@ export async function POST(request: Request, ctx: Ctx) {
 
     await supabase.from("deck_chunks").delete().eq("deck_id", deckRow.id);
 
+    let deckPagesWritable = true;
+    const delPages = await supabase.from("deck_pages").delete().eq("deck_id", deckRow.id);
+    if (delPages.error) {
+      if (isMissingDeckPagesRelationError(delPages.error)) {
+        deckPagesWritable = false;
+      } else {
+        await setDeckError(
+          supabase,
+          deckRow.id,
+          user.id,
+          "Could not clear old page rows.",
+        );
+        return NextResponse.json(
+          {
+            error: "Failed to prepare page storage.",
+            ...devDetail(
+              `${delPages.error.message}${delPages.error.code ? ` (${delPages.error.code})` : ""}`,
+            ),
+          },
+          { status: 500 },
+        );
+      }
+    }
+
     const insertBatchSize = 40;
     if (rows.length) {
       for (let offset = 0; offset < rows.length; offset += insertBatchSize) {
@@ -220,6 +264,38 @@ export async function POST(request: Request, ctx: Ctx) {
       }
     }
 
+    if (pageRows.length && deckPagesWritable) {
+      for (let offset = 0; offset < pageRows.length; offset += insertBatchSize) {
+        const slice = pageRows.slice(offset, offset + insertBatchSize);
+        const { error: pgErr } = await supabase.from("deck_pages").insert(
+          slice.map((p) => ({
+            deck_id: deckRow.id,
+            page_number: p.page_number,
+            content: p.content,
+          })),
+        );
+        if (pgErr) {
+          if (isMissingDeckPagesRelationError(pgErr)) {
+            deckPagesWritable = false;
+            break;
+          }
+          await setDeckError(
+            supabase,
+            deckRow.id,
+            user.id,
+            "Could not save per-page text.",
+          );
+          return NextResponse.json(
+            {
+              error: "Failed to save page text.",
+              ...devDetail(`${pgErr.message}${pgErr.code ? ` (${pgErr.code})` : ""}`),
+            },
+            { status: 500 },
+          );
+        }
+      }
+    }
+
     await supabase
       .from("decks")
       .update({
@@ -235,6 +311,9 @@ export async function POST(request: Request, ctx: Ctx) {
       deck_id: deckRow.id,
       storage_path: objectPath,
       chunk_count: rows.length,
+      page_count: pageRows.length,
+      deck_pages_saved: deckPagesWritable,
+      book_view_ready: deckPagesWritable,
     });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);

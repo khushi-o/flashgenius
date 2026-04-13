@@ -294,7 +294,7 @@ See **`.env.example`** in repo root. Summary:
 
 | Variable | Example | Notes |
 |----------|---------|--------|
-| `MAX_UPLOAD_MB` | `20` | |
+| `MAX_UPLOAD_MB` | `20` | 1–500 MB cap in code |
 | `MAX_CHUNKS_PER_DECK` | `12` | |
 | `MAX_CARDS_PER_DECK` | `80` | |
 | `CHUNK_CHAR_TARGET` | `3200` | ~800 tokens rough |

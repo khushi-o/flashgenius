@@ -1,5 +1,7 @@
 "use client";
 
+import { createAndUploadPdf } from "@/lib/decks/upload-pdf-client";
+import { BackToLibraryLink } from "@/components/ui/back-to-library-link";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useId, useState } from "react";
@@ -9,16 +11,6 @@ function formatFileSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
-}
-
-async function parseResponseBody(res: Response): Promise<Record<string, unknown>> {
-  const text = await res.text();
-  if (!text) return {};
-  try {
-    return JSON.parse(text) as Record<string, unknown>;
-  } catch {
-    return { error: `Server returned ${res.status} (non-JSON response).` };
-  }
 }
 
 function stemFromFilename(name: string) {
@@ -63,50 +55,11 @@ export function CreateDeckForm() {
 
     setBusy(true);
     try {
-      const createRes = await fetch("/api/decks", {
-        method: "POST",
-        credentials: "same-origin",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title }),
-      });
-      const createJson = await parseResponseBody(createRes);
-      if (!createRes.ok) {
-        setError(
-          typeof createJson.error === "string"
-            ? createJson.error
-            : "Could not create deck.",
-        );
-        return;
-      }
-      const deck = createJson.deck as { id?: string } | undefined;
-      const deckId = deck?.id;
-      if (!deckId) {
-        setError("Invalid response from server.");
-        return;
-      }
-
-      const fd = new FormData();
-      fd.set("file", file);
-
-      const upRes = await fetch(`/api/decks/${deckId}/upload`, {
-        method: "POST",
-        credentials: "same-origin",
-        body: fd,
-      });
-      const upJson = await parseResponseBody(upRes);
-      if (!upRes.ok) {
-        const msg =
-          typeof upJson.error === "string" ? upJson.error : "Upload or extraction failed.";
-        const detail =
-          typeof upJson.detail === "string" ? ` (${upJson.detail})` : "";
-        setError(`${msg}${detail}`);
-        return;
-      }
-
-      router.push(`/decks/${deckId}`);
+      const { deckId } = await createAndUploadPdf(file, title);
+      router.push(`/decks/${deckId}/read`);
       router.refresh();
-    } catch {
-      setError("Network error. Try again.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Network error. Try again.");
     } finally {
       setBusy(false);
     }
@@ -114,9 +67,7 @@ export function CreateDeckForm() {
 
   return (
     <div className="fg-create">
-      <Link href="/decks" className="fg-create-back">
-        ← Back to library
-      </Link>
+      <BackToLibraryLink className="mb-5 -ml-1" />
 
       <div className="fg-create-heading-row">
         <h1 className="fg-create-title">Create a new deck</h1>
@@ -135,7 +86,7 @@ export function CreateDeckForm() {
       <p className="fg-create-tip">
         <strong>Why duplicates?</strong> Each time you finish this flow we create a{" "}
         <em>new</em> library deck (new row), even if the PDF name is the same. Use{" "}
-        <Link href="/decks" className="text-sky-400 hover:text-sky-300 hover:underline">
+        <Link href="/decks" className="text-p-sage-bright hover:text-p-cream hover:underline">
           Library
         </Link>{" "}
         to pick the deck you want, then <strong>View cards</strong> after generation.
@@ -216,7 +167,9 @@ export function CreateDeckForm() {
 
       <p className="fg-create-pipeline-note">
         Max size respects <code className="rounded bg-black/30 px-1">MAX_UPLOAD_MB</code>{" "}
-        (default 20). Only PDF files with a readable text layer are supported.
+        (default 20). Only PDFs with a real <strong>text layer</strong> work well — scanned or
+        “flattened” pages can look long but extract almost nothing, which limits cards. Prefer
+        export-as-PDF from the app where you authored the notes.
       </p>
 
       <button

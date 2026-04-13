@@ -1,12 +1,12 @@
 /* Login — scoped journey visuals */
 
 .fg-login-root {
-  --fg-login-accent: #38bdf8;
-  --fg-login-violet: #a78bfa;
-  --fg-login-glow: rgba(56, 189, 248, 0.35);
+  --fg-login-accent: #b5c496;
+  --fg-login-accent-bright: #d2ddb9;
+  --fg-login-glow: rgba(181, 196, 150, 0.28);
   position: relative;
   isolation: isolate;
-  min-height: calc(100vh - 3.5rem);
+  min-height: calc(100dvh - 3.5rem);
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -27,10 +27,10 @@
   inset: -40%;
   z-index: -2;
   background:
-    radial-gradient(ellipse 80% 50% at 20% 40%, rgba(56, 189, 248, 0.18), transparent 55%),
-    radial-gradient(ellipse 60% 40% at 85% 20%, rgba(167, 139, 250, 0.2), transparent 50%),
-    radial-gradient(ellipse 50% 35% at 70% 80%, rgba(14, 165, 233, 0.12), transparent 45%),
-    linear-gradient(165deg, #09090b 0%, #18181b 45%, #0c0a12 100%);
+    radial-gradient(ellipse 80% 50% at 18% 35%, rgba(181, 196, 150, 0.16), transparent 55%),
+    radial-gradient(ellipse 60% 45% at 88% 22%, rgba(212, 196, 168, 0.12), transparent 50%),
+    radial-gradient(ellipse 50% 38% at 72% 82%, rgba(143, 163, 114, 0.1), transparent 48%),
+    linear-gradient(165deg, #0f141f 0%, #121a27 42%, #0a0e16 100%);
   animation: fg-login-drift 22s ease-in-out infinite alternate;
 }
 
@@ -57,15 +57,23 @@
   display: grid;
   gap: 2.5rem;
   width: 100%;
-  max-width: 1040px;
+  max-width: 1080px;
   margin: 0 auto;
   align-items: center;
 }
 
 @media (min-width: 1024px) {
   .fg-login-grid {
-    grid-template-columns: 1fr minmax(320px, 400px);
-    gap: 3rem;
+    grid-template-columns: minmax(0, 1.15fr) minmax(320px, 420px);
+    gap: 3rem 3.5rem;
+    max-width: 1180px;
+    align-items: center;
+  }
+
+  .fg-login-card {
+    justify-self: end;
+    width: 100%;
+    max-width: 420px;
   }
 }
 
@@ -89,9 +97,9 @@
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #e0f2fe;
-  background: rgba(56, 189, 248, 0.12);
-  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: #d2ddb9;
+  background: rgba(181, 196, 150, 0.12);
+  border: 1px solid rgba(181, 196, 150, 0.35);
   margin-bottom: 1rem;
 }
 
@@ -101,11 +109,11 @@
   font-weight: 700;
   letter-spacing: -0.04em;
   line-height: 1.15;
-  color: #fafafa;
+  color: #f1ede0;
 }
 
 .fg-login-story h1 span {
-  background: linear-gradient(105deg, #7dd3fc, #a78bfa, #c4b5fd);
+  background: linear-gradient(105deg, #d2ddb9, #b5c496, #d4c4a8);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -115,7 +123,7 @@
   margin: 1rem 0 0;
   font-size: 0.95rem;
   line-height: 1.6;
-  color: #a1a1aa;
+  color: #b5a484;
   max-width: 36ch;
   margin-left: auto;
   margin-right: auto;
@@ -150,13 +158,13 @@
   border-radius: 0.65rem;
   font-size: 0.75rem;
   font-weight: 500;
-  color: #d4d4d8;
-  background: rgba(24, 24, 27, 0.85);
-  border: 1px solid rgba(63, 63, 70, 0.9);
+  color: #d4c4a8;
+  background: rgba(22, 31, 46, 0.85);
+  border: 1px solid rgba(212, 196, 168, 0.22);
 }
 
 .fg-login-pipeline-arrow {
-  color: #52525b;
+  color: #6b7280;
   font-size: 0.65rem;
   user-select: none;
 }
@@ -164,8 +172,8 @@
 .fg-login-card {
   border-radius: 1.25rem;
   padding: 1.5rem 1.35rem 1.65rem;
-  background: rgba(9, 9, 11, 0.72);
-  border: 1px solid rgba(63, 63, 70, 0.85);
+  background: rgba(15, 20, 31, 0.78);
+  border: 1px solid rgba(212, 196, 168, 0.18);
   box-shadow:
     0 0 0 1px rgba(255, 255, 255, 0.04) inset,
     0 24px 48px -12px rgba(0, 0, 0, 0.55);
@@ -182,21 +190,21 @@
   margin: 0 0 0.35rem;
   font-size: 1.1rem;
   font-weight: 600;
-  color: #fafafa;
+  color: #f1ede0;
 }
 
 .fg-login-card-sub {
   margin: 0 0 0.25rem;
   font-size: 0.8rem;
   line-height: 1.5;
-  color: #a1a1aa;
+  color: #b5a484;
 }
 
 .fg-login-foot {
   margin-top: 2rem;
   text-align: center;
   font-size: 0.8rem;
-  color: #71717a;
+  color: #8a7d68;
 }
 
 @media (min-width: 1024px) {
@@ -206,12 +214,19 @@
 }
 
 .fg-login-foot a {
-  color: #7dd3fc;
+  color: #d2ddb9;
   text-decoration: none;
+  padding: 0.25rem 0.35rem;
+  border-radius: 0.5rem;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease;
 }
 
 .fg-login-foot a:hover {
-  text-decoration: underline;
+  color: #f1ede0;
+  background: rgba(181, 196, 150, 0.1);
+  text-decoration: none;
 }
 
 .fg-login-check,
@@ -224,9 +239,9 @@
 }
 
 .fg-login-check {
-  border: 1px solid rgba(56, 189, 248, 0.35);
-  background: rgba(14, 165, 233, 0.1);
-  color: #bae6fd;
+  border: 1px solid rgba(181, 196, 150, 0.35);
+  background: rgba(181, 196, 150, 0.1);
+  color: #f1ede0;
 }
 
 .fg-login-err {

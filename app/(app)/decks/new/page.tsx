@@ -16,11 +16,11 @@ export default async function NewDeckPage() {
   }
 
   return (
-    <div className="fg-new-page">
+    <div className="fg-new-page w-full">
       <Suspense fallback={null}>
         <NewDeckWelcome />
       </Suspense>
-      <div className="mx-auto w-full max-w-2xl flex-1 px-4 sm:px-6">
+      <div className="mx-auto w-full max-w-6xl flex-1 px-4 pb-14 pt-2 sm:px-8 lg:px-12">
         <CreateDeckForm />
       </div>
     </div>

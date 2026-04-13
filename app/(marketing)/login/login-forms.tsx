@@ -1,9 +1,9 @@
 "use client";
 
 import { devQuickLogin } from "@/lib/actions/dev-login";
-import { useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
+import { useState, type FormEvent } from "react";
 
 type Props = { nextPath: string; devQuickLoginEnabled?: boolean };
 
@@ -86,7 +86,7 @@ export function LoginForms({ nextPath, devQuickLoginEnabled }: Props) {
       ) : null}
 
       <form onSubmit={sendMagicLink} className="mt-6 flex flex-col gap-3">
-        <label className="text-sm font-medium text-zinc-300">
+        <label className="text-sm font-medium text-p-sand">
           Email
           <input
             name="email"
@@ -95,14 +95,14 @@ export function LoginForms({ nextPath, devQuickLoginEnabled }: Props) {
             autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="mt-1.5 w-full rounded-xl border border-zinc-600/90 bg-zinc-950/80 px-3 py-2.5 text-sm text-zinc-50 shadow-inner outline-none ring-sky-500/40 placeholder:text-zinc-600 focus:border-sky-500/60 focus:ring-2"
+            className="mt-1.5 w-full rounded-xl border border-p-sand/20 bg-p-navy-deep/80 px-3 py-2.5 text-sm text-p-cream shadow-inner outline-none ring-p-sage/30 placeholder:text-p-sand-dim focus:border-p-sage/50 focus:ring-2"
             placeholder="you@example.com"
           />
         </label>
         <button
           type="submit"
           disabled={busy !== null}
-          className="rounded-xl bg-gradient-to-r from-sky-600 to-violet-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-sky-950/40 hover:brightness-110 disabled:opacity-50"
+          className="tap-scale min-h-11 w-full rounded-xl bg-gradient-to-r from-p-sage to-p-sage-muted px-4 py-3 text-sm font-semibold text-p-navy shadow-lg shadow-black/30 hover:brightness-105 disabled:opacity-50 [-webkit-tap-highlight-color:transparent]"
         >
           {busy === "email" ? "Sending…" : "Email me a magic link"}
         </button>
@@ -110,9 +110,9 @@ export function LoginForms({ nextPath, devQuickLoginEnabled }: Props) {
 
       <div className="relative my-7">
         <div className="absolute inset-0 flex items-center" aria-hidden>
-          <div className="w-full border-t border-zinc-700/80" />
+          <div className="w-full border-t border-p-sand/20" />
         </div>
-        <div className="relative flex justify-center text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-500">
+        <div className="relative flex justify-center text-[10px] font-semibold uppercase tracking-[0.2em] text-p-sand-dim">
           or continue with
         </div>
       </div>
@@ -121,7 +121,7 @@ export function LoginForms({ nextPath, devQuickLoginEnabled }: Props) {
         type="button"
         onClick={continueWithGoogle}
         disabled={busy !== null}
-        className="flex w-full items-center justify-center gap-2 rounded-xl border border-zinc-600 bg-zinc-900/60 px-4 py-2.5 text-sm font-medium text-zinc-100 hover:border-zinc-500 hover:bg-zinc-800/80 disabled:opacity-50"
+        className="tap-scale flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-p-sand/25 bg-p-navy-mid/70 px-4 py-3 text-sm font-medium text-p-cream transition-colors duration-150 hover:border-p-sage/35 hover:bg-p-navy/80 disabled:opacity-50 [-webkit-tap-highlight-color:transparent]"
       >
         <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden>
           <path
@@ -158,7 +158,7 @@ export function LoginForms({ nextPath, devQuickLoginEnabled }: Props) {
             type="button"
             onClick={runDevQuickLogin}
             disabled={busy !== null}
-            className="mt-3 w-full rounded-lg border border-amber-700/50 bg-amber-900/35 px-3 py-2 text-sm font-medium text-amber-50 hover:bg-amber-900/50 disabled:opacity-50"
+            className="tap-scale mt-3 flex min-h-11 w-full items-center justify-center rounded-lg border border-amber-700/50 bg-amber-900/35 px-4 py-2.5 text-sm font-medium text-amber-50 hover:bg-amber-900/50 disabled:opacity-50 [-webkit-tap-highlight-color:transparent]"
           >
             {busy === "dev" ? "Signing in…" : "Quick login (dev)"}
           </button>

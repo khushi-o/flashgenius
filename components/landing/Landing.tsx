@@ -1,30 +1,6 @@
+import { AppLogoMark } from "@/components/app-logo";
 import Link from "next/link";
 import { FlipDemo } from "./FlipDemo";
-
-function BrainLogoIcon() {
-  return (
-    <span className="landing-brand-mark" aria-hidden>
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-        <path
-          d="M12 4c-1.5 0-2.8.6-3.7 1.6C7.4 5 6.5 4.8 5.6 5.2c-1 .4-1.7 1.4-1.7 2.5 0 .3 0 .6.1.9-.6.5-1 1.3-1 2.2 0 .9.4 1.7 1 2.2-.1.3-.1.6-.1.9 0 1.1.7 2.1 1.7 2.5.9.4 1.8.2 2.7-.4.9 1 2.2 1.6 3.7 1.6s2.8-.6 3.7-1.6c.9.6 1.8.8 2.7.4 1-.4 1.7-1.4 1.7-2.5 0-.3 0-.6-.1-.9.6-.5 1-1.3 1-2.2 0-.9-.4-1.7-1-2.2.1-.3.1-.6.1-.9 0-1.1-.7-2.1-1.7-2.5-.9-.4-1.8-.2-2.7.4-.9-1-2.2-1.6-3.7-1.6Z"
-          fill="url(#landing-brain-grad)"
-        />
-        <path
-          d="M9 10h.01M12 10h.01M15 10h.01M10 13h4"
-          stroke="rgba(255,255,255,0.9)"
-          strokeWidth="1.25"
-          strokeLinecap="round"
-        />
-        <defs>
-          <linearGradient id="landing-brain-grad" x1="4" y1="4" x2="20" y2="20">
-            <stop stopColor="#0ea5e9" />
-            <stop offset="1" stopColor="#6366f1" />
-          </linearGradient>
-        </defs>
-      </svg>
-    </span>
-  );
-}
 
 function HeroBookIcon() {
   return (
@@ -57,7 +33,9 @@ export function Landing() {
     <div className="landing-root">
       <nav className="landing-nav landing-fade-up d0">
         <Link href="/" className="landing-nav-brand">
-          <BrainLogoIcon />
+          <span className="landing-brand-mark" aria-hidden>
+            <AppLogoMark size="md" />
+          </span>
           <span className="landing-nav-brand-text">
             <span className="landing-nav-brand-name">FlashGenius</span>
             <span className="landing-nav-brand-tag">Master through repetition</span>
@@ -154,7 +132,14 @@ export function Landing() {
 
 function LibraryGlyph() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden
+      className="block shrink-0"
+    >
       <path
         d="M4 19.5A2.5 2.5 0 016.5 17H20"
         stroke="currentColor"
@@ -173,7 +158,14 @@ function LibraryGlyph() {
 
 function UploadGlyph() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden
+      className="block shrink-0"
+    >
       <path
         d="M12 15V3m0 0l4 4m-4-4L8 7M4 19h16"
         stroke="currentColor"

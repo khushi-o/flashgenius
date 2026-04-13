@@ -18,9 +18,12 @@ async function parseJson(res: Response): Promise<Record<string, unknown>> {
 export function GenerateDeckButton({
   deckId,
   status,
+  labelShort,
 }: {
   deckId: string;
   status: string;
+  /** Compact label for deck cards (e.g. “Generate”). */
+  labelShort?: boolean;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -44,9 +47,15 @@ export function GenerateDeckButton({
       const data = await parseJson(res);
       setBusy(false);
       if (!res.ok) {
-        setMsg(
-          typeof data.error === "string" ? data.error : "Generation failed.",
-        );
+        const base =
+          typeof data.error === "string" ? data.error : "Generation failed.";
+        const detail =
+          typeof data.detail === "string" && data.detail.trim()
+            ? ` ${res.status}: ${data.detail.trim().slice(0, 240)}`
+            : res.status >= 500
+              ? ` (HTTP ${res.status})`
+              : "";
+        setMsg(`${base}${detail}`.trim());
         return;
       }
       const inserted = typeof data.inserted === "number" ? data.inserted : 0;
@@ -64,15 +73,14 @@ export function GenerateDeckButton({
     }
   }
 
+  const btnClass = labelShort
+    ? "tap-scale inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl border border-p-sand/20 bg-p-navy-mid/60 px-4 py-2.5 text-xs font-semibold text-p-cream transition-[background-color,border-color,color] duration-150 hover:border-p-sage/35 hover:bg-p-navy/80 disabled:opacity-50 [-webkit-tap-highlight-color:transparent]"
+    : "tap-scale inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg border border-p-sage/45 bg-p-sage/15 px-4 py-2.5 text-xs font-semibold text-p-cream transition-[background-color,border-color,color] duration-150 hover:bg-p-sage/25 disabled:opacity-50 [-webkit-tap-highlight-color:transparent]";
+
   return (
     <div className="flex flex-col items-end gap-1">
-      <button
-        type="button"
-        onClick={run}
-        disabled={showWorking}
-        className="shrink-0 rounded-lg border border-violet-500/50 bg-violet-950/60 px-3 py-1.5 text-xs font-semibold text-violet-100 hover:bg-violet-900/60 disabled:opacity-50"
-      >
-        {showWorking ? "Generating…" : "Generate cards"}
+      <button type="button" onClick={run} disabled={showWorking} className={btnClass}>
+        {showWorking ? "Generating…" : labelShort ? "Generate" : "Generate cards"}
       </button>
       {msg ? (
         <span className="max-w-[min(100%,280px)] text-right text-[11px] leading-snug text-zinc-400 break-words">
