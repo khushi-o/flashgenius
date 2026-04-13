@@ -1,4 +1,17 @@
 /**
+ * Errors that should propagate to the client (wrong file type, encryption).
+ * All other engine failures are treated as "no text extracted" so the API can return
+ * PDF_EMPTY_TEXT or PDF_ENGINE instead of the generic PDF_NO_TEXT_OR_UNSUPPORTED catch-all.
+ */
+export function isPdfExtractFatalError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  const m = msg.toLowerCase();
+  if (/password|encrypted|encrypt|need.*password|wrong password/i.test(msg)) return true;
+  if (/invalid|corrupt|malformed|xref|startxref/i.test(m)) return true;
+  return false;
+}
+
+/**
  * Map PDF.js extraction failures to a safe, user-facing string (no stack traces).
  */
 export function pdfExtractUserMessage(err: unknown): { error: string; code: string } {

@@ -1,7 +1,16 @@
 import { maxPdfPagesStored } from "@/lib/constants/uploads";
 import { slicePdfFromDetectedHeader } from "@/lib/pdf/is-pdf";
+import { isPdfExtractFatalError } from "@/lib/pdf/pdf-extract-user-message";
 
 export type PdfPageText = { pageNumber: number; text: string };
+
+/** Result of {@link extractPdfText}; `emptyReason` is set only when there is no usable text. */
+export type PdfExtractOutcome = {
+  fullText: string;
+  pages: PdfPageText[];
+  /** No text, but engines failed (fonts/canvas/server) — not the same as a scanned PDF. */
+  emptyReason?: "engine";
+};
 
 type PdfjsModule = typeof import("pdfjs-dist/legacy/build/pdf.mjs");
 
@@ -143,10 +152,7 @@ async function extractWithPdfParse(buffer: Buffer): Promise<{ fullText: string; 
  * Never rethrow a pdf.js error if pdf-parse completed without throwing (avoids masking empty
  * extractions with a generic engine error).
  */
-export async function extractPdfText(buffer: Buffer): Promise<{
-  fullText: string;
-  pages: PdfPageText[];
-}> {
+export async function extractPdfText(buffer: Buffer): Promise<PdfExtractOutcome> {
   const working = slicePdfFromDetectedHeader(buffer);
   if (working.length < 5) {
     return { fullText: "", pages: [] };
@@ -154,7 +160,7 @@ export async function extractPdfText(buffer: Buffer): Promise<{
 
   const fromParse = await extractWithPdfParse(working);
   if (fromParse && isNonEmpty(fromParse)) {
-    return fromParse;
+    return { fullText: fromParse.fullText, pages: fromParse.pages };
   }
 
   let lastPdfjsThrow: unknown;
@@ -190,16 +196,20 @@ export async function extractPdfText(buffer: Buffer): Promise<{
   }
 
   if (fromParse !== null) {
-    return fromParse;
+    return { fullText: fromParse.fullText, pages: fromParse.pages };
   }
 
   if (lastPdfjsThrow !== undefined) {
-    if (process.env.LOG_PDF_EXTRACT === "1") {
-      console.error("[pdf] rethrowing after failed engines", lastPdfjsThrow);
+    if (isPdfExtractFatalError(lastPdfjsThrow)) {
+      throw lastPdfjsThrow instanceof Error
+        ? lastPdfjsThrow
+        : new Error(String(lastPdfjsThrow), { cause: lastPdfjsThrow });
     }
-    throw lastPdfjsThrow instanceof Error
-      ? lastPdfjsThrow
-      : new Error(String(lastPdfjsThrow), { cause: lastPdfjsThrow });
+    console.error("[pdf] non-fatal engine failure — returning empty (see Vercel logs)", lastPdfjsThrow, {
+      bytes: working.length,
+      headerHex: working.subarray(0, Math.min(32, working.length)).toString("hex"),
+    });
+    return { fullText: "", pages: [], emptyReason: "engine" };
   }
 
   if (process.env.LOG_PDF_EXTRACT === "1" || process.env.NODE_ENV === "development") {

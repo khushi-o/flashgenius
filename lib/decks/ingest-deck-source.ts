@@ -76,10 +76,12 @@ export async function finalizeDeckIngestion(args: DeckIngestArgs): Promise<NextR
     let pageRows: { page_number: number; content: string }[] = [];
     const maxChars = 120_000;
     const pageCap = maxPdfPagesStored();
+    let pdfEmptyReason: "engine" | undefined = undefined;
 
     if (kind === "pdf") {
       try {
         const extracted = await extractPdfText(buf);
+        pdfEmptyReason = extracted.emptyReason;
         text = extracted.fullText;
         pageRows = extracted.pages
           .filter((p) => p.text.length > 0)
@@ -135,6 +137,10 @@ export async function finalizeDeckIngestion(args: DeckIngestArgs): Promise<NextR
         userId,
         kind === "pdf" ? "No extractable text in this PDF." : "No extractable text in this document.",
       );
+      if (kind === "pdf" && pdfEmptyReason === "engine") {
+        const { error, code } = pdfExtractUserMessage(new Error("canvas"));
+        return NextResponse.json({ error, code }, { status: 422 });
+      }
       return NextResponse.json(
         {
           error:
