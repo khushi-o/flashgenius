@@ -112,7 +112,8 @@ export async function POST(request: Request, ctx: Ctx) {
     raw = await generateGeminiText(buildPageSummaryPrompt(pageText));
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Model error.";
-    return NextResponse.json({ error: "Could not generate summary.", detail: msg }, { status: 502 });
+    /** 503 = upstream model / timeout — not an nginx “Bad Gateway”. */
+    return NextResponse.json({ error: "Could not generate summary.", detail: msg }, { status: 503 });
   }
 
   const parsed = parsePageSummaryOutput(raw);

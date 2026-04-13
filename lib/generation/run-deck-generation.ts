@@ -198,7 +198,8 @@ export async function runDeckGeneration(
       return {
         ok: false,
         message: userMsg,
-        httpStatus: 502,
+        /** 503: model/network — avoid 502 which browsers conflate with platform errors */
+        httpStatus: 503,
         detail: lastApi ? lastApi.slice(0, 400) : undefined,
       };
     }

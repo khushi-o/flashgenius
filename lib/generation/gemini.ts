@@ -9,6 +9,29 @@ function normalizeGeminiApiKey(raw: string | undefined): string | null {
   return k || null;
 }
 
+/** Bound each model attempt so /summarize stays under route maxDuration (e.g. 60s on Vercel). */
+const PER_MODEL_TIMEOUT_MS = 11_000;
+/** Hard cap — worst case ~4×11s ≈ 44s before other work. */
+const MAX_MODEL_ATTEMPTS = 4;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(() => {
+      reject(new Error(`${label} timed out after ${ms}ms`));
+    }, ms);
+    promise.then(
+      (v) => {
+        clearTimeout(t);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(t);
+        reject(e);
+      },
+    );
+  });
+}
+
 export async function generateGeminiText(prompt: string): Promise<string> {
   const key = normalizeGeminiApiKey(process.env.GEMINI_API_KEY);
   if (!key) {
@@ -17,40 +40,31 @@ export async function generateGeminiText(prompt: string): Promise<string> {
 
   const genAI = new GoogleGenerativeAI(key);
   /**
-   * Stable ids for Google AI Studio (`generativelanguage.googleapis.com`).
-   * Do not use `*-latest` for 1.5 (often 404 on v1beta). Do not rely on `gemini-1.5-pro`
-   * for all keys (many projects get 404). Only use ids that `models.list` returns for
-   * your key — e.g. `gemini-1.5-flash-8b` is not available on this API (404).
+   * Short, high-signal fallback list for `generativelanguage.googleapis.com` (AI Studio key).
+   * Long lists + retries were exceeding serverless time limits and surfacing as 502 from the host.
+   * Override with GEMINI_MODEL if you know a working id for your project.
    * @see https://ai.google.dev/gemini-api/docs/models/gemini
    */
-  const defaults = [
-    "gemini-2.5-flash",
-    "gemini-2.5-flash-001",
-    "gemini-2.5-flash-lite",
-    "gemini-2.5-flash-lite-001",
-    "gemini-2.0-flash",
-    "gemini-2.0-flash-001",
-    "gemini-1.5-flash",
-    "gemini-1.5-flash-002",
-  ];
+  const defaults = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-002", "gemini-2.5-flash"];
   const preferred = process.env.GEMINI_MODEL?.trim();
-  const models = preferred
+  const merged = preferred
     ? [preferred, ...defaults.filter((m) => m !== preferred)]
     : defaults;
+  const models = merged.slice(0, MAX_MODEL_ATTEMPTS);
+
   let lastErr: unknown;
-  for (let pass = 0; pass < 2; pass++) {
-    if (pass > 0) {
-      await new Promise((r) => setTimeout(r, 750));
-    }
-    for (const name of models) {
-      try {
-        const model = genAI.getGenerativeModel({ model: name });
-        const result = await model.generateContent(prompt);
-        const out = result.response.text();
-        if (out?.trim()) return out.trim();
-      } catch (e) {
-        lastErr = e;
-      }
+  for (const name of models) {
+    try {
+      const model = genAI.getGenerativeModel({ model: name });
+      const result = await withTimeout(
+        model.generateContent(prompt),
+        PER_MODEL_TIMEOUT_MS,
+        name,
+      );
+      const out = result.response.text();
+      if (out?.trim()) return out.trim();
+    } catch (e) {
+      lastErr = e;
     }
   }
   const tried = models.join(", ");
