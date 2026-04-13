@@ -114,4 +114,4 @@ Hungry for diagrams, threat model notes, and a security checklist? That lives in
 
 ## License
 
-[MIT](./LICENSE). Open the file for the full text. GitHub will show “MIT” on the repo overview when `LICENSE` is on the default branch.
+[MIT](./LICENSE). 
