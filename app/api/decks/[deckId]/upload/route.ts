@@ -2,7 +2,6 @@ import { requireSessionUser } from "@/lib/api/route-auth";
 import { chunkCharTarget, chunkOverlapChars, maxPdfPagesStored, maxUploadBytes } from "@/lib/constants/uploads";
 import { isMissingDeckPagesRelationError } from "@/lib/supabase/deck-pages-errors";
 import { DOCX_MIME } from "@/lib/decks/upload-source-types";
-import { extractDocxText } from "@/lib/docx/extract-docx-text";
 import { chunkPlainText } from "@/lib/pdf/chunk-plaintext";
 import { extractPdfText } from "@/lib/pdf/extract-text";
 import { isPdfBuffer } from "@/lib/pdf/is-pdf";
@@ -12,6 +11,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
+/** Vercel clamps to plan max (e.g. 60s Hobby, 300s Pro). */
 export const maxDuration = 300;
 
 function maxChunks(): number {
@@ -148,7 +148,17 @@ export async function POST(request: Request, ctx: Ctx) {
     );
   }
 
-  const buf = Buffer.from(await entry.arrayBuffer());
+  let buf: Buffer;
+  try {
+    buf = Buffer.from(await entry.arrayBuffer());
+  } catch (e) {
+    console.error("[decks/upload] arrayBuffer", e);
+    return NextResponse.json(
+      { error: "Could not read the uploaded file data.", ...devDetailFromError(e) },
+      { status: 400 },
+    );
+  }
+
   const isPdf = isPdfBuffer(buf);
   const isDocx = looksDocxUpload(entry);
   if (!isPdf && !isDocx) {
@@ -244,6 +254,7 @@ export async function POST(request: Request, ctx: Ctx) {
       }
     } else {
       try {
+        const { extractDocxText } = await import("@/lib/docx/extract-docx-text");
         text = await extractDocxText(buf);
       } catch (extractErr) {
         await setDeckError(
@@ -409,14 +420,23 @@ export async function POST(request: Request, ctx: Ctx) {
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     console.error("[decks/upload]", e);
-    await setDeckError(
-      supabase,
-      deckRow.id,
-      user.id,
-      "Unexpected error during upload.",
-    );
+    try {
+      await setDeckError(
+        supabase,
+        deckRow.id,
+        user.id,
+        "Unexpected error during upload.",
+      );
+    } catch (persistErr) {
+      console.error("[decks/upload] setDeckError failed", persistErr);
+    }
+    const debug =
+      process.env.NODE_ENV === "development" || process.env.UPLOAD_ROUTE_DEBUG === "1";
     return NextResponse.json(
-      { error: "Upload could not complete.", ...devDetail(message) },
+      {
+        error: "Upload could not complete.",
+        ...(debug ? { detail: message } : {}),
+      },
       { status: 500 },
     );
   }

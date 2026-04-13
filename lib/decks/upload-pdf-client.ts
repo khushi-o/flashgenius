@@ -9,7 +9,11 @@ async function parseResponseBody(res: Response): Promise<Record<string, unknown>
   try {
     return JSON.parse(text) as Record<string, unknown>;
   } catch {
-    return { error: `Server returned ${res.status} (non-JSON response).` };
+    const tail =
+      res.status >= 500
+        ? " This usually means the server crashed or returned an HTML error page — check Vercel → Logs for this request."
+        : "";
+    return { error: `Server returned ${res.status} (non-JSON response).${tail}` };
   }
 }
 

@@ -1,4 +1,3 @@
-import { PDFParse } from "pdf-parse";
 import { maxPdfPagesStored } from "@/lib/constants/uploads";
 
 export type PdfPageText = { pageNumber: number; text: string };
@@ -19,7 +18,9 @@ export async function extractPdfText(buffer: Buffer): Promise<{
   fullText: string;
   pages: PdfPageText[];
 }> {
-  let parser: PDFParse | undefined;
+  const { PDFParse } = await import("pdf-parse");
+  type ParserInstance = InstanceType<typeof PDFParse>;
+  let parser: ParserInstance | undefined;
   try {
     parser = new PDFParse({ data: buffer });
     const pageCap = Math.min(maxPdfPagesStored(), 500);
