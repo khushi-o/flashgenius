@@ -194,9 +194,19 @@ export async function extractPdfText(buffer: Buffer): Promise<{
   }
 
   if (lastPdfjsThrow !== undefined) {
+    if (process.env.LOG_PDF_EXTRACT === "1") {
+      console.error("[pdf] rethrowing after failed engines", lastPdfjsThrow);
+    }
     throw lastPdfjsThrow instanceof Error
       ? lastPdfjsThrow
       : new Error(String(lastPdfjsThrow), { cause: lastPdfjsThrow });
+  }
+
+  if (process.env.LOG_PDF_EXTRACT === "1" || process.env.NODE_ENV === "development") {
+    console.error("[pdf] all extractors returned empty", {
+      bytes: working.length,
+      headerHex: working.subarray(0, Math.min(32, working.length)).toString("hex"),
+    });
   }
 
   return { fullText: "", pages: [] };

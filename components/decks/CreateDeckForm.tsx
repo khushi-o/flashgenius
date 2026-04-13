@@ -103,7 +103,7 @@ export function CreateDeckForm({ maxUploadMb }: CreateDeckFormProps) {
           <span className="fg-create-dot" />
         </div>
       </div>
-      <p className="fg-create-lead">
+      <div className="fg-create-lead">
         Upload a <strong>PDF</strong> or <strong>Word .docx</strong> (max {maxUploadMb} MB). The
         file must have <strong>selectable text</strong> — scanned or “flattened” PDFs usually
         won&apos;t work. After upload, open{" "}
@@ -111,7 +111,7 @@ export function CreateDeckForm({ maxUploadMb }: CreateDeckFormProps) {
           Library
         </Link>{" "}
         and run <strong>Generate cards</strong>.
-      </p>
+      </div>
 
       <label className="fg-create-drop">
         <input
@@ -181,9 +181,9 @@ export function CreateDeckForm({ maxUploadMb }: CreateDeckFormProps) {
       </div>
 
       {error ? (
-        <p className="fg-create-error" role="alert">
+        <div className="fg-create-error" role="alert">
           {error}
-        </p>
+        </div>
       ) : null}
 
       <button

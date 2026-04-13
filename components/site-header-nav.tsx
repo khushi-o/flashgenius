@@ -3,6 +3,7 @@
 import { signOut } from "@/lib/actions/auth";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 
 function navButtonClass(active: boolean) {
   if (active) {
@@ -13,9 +14,15 @@ function navButtonClass(active: boolean) {
 
 export function SiteHeaderNav() {
   const pathname = usePathname() ?? "";
-  const libraryActive = pathname.startsWith("/decks") && !pathname.startsWith("/decks/new");
-  const studyActive = pathname.startsWith("/study");
-  const uploadActive = pathname.startsWith("/decks/new");
+  /** SSR + first client paint use empty path so active styles match (avoids React #418 hydration). */
+  const [activePath, setActivePath] = useState("");
+  useEffect(() => {
+    setActivePath(pathname);
+  }, [pathname]);
+
+  const libraryActive = activePath.startsWith("/decks") && !activePath.startsWith("/decks/new");
+  const studyActive = activePath.startsWith("/study");
+  const uploadActive = activePath.startsWith("/decks/new");
 
   return (
     <div className="flex shrink-0 items-center gap-2 sm:gap-3">
