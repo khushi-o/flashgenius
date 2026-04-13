@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { safeNextPath } from "@/lib/auth/safe-next";
 import { LoginForms } from "./login-forms";
+import "./login.css";
 
 type Props = {
   searchParams: Promise<{
@@ -10,39 +11,75 @@ type Props = {
   }>;
 };
 
+/** After sign-in, land on upload flow with a welcome cue unless `next` was explicit. */
+const DEFAULT_POST_LOGIN = "/decks/new?welcome=1";
+
 export default async function LoginPage({ searchParams }: Props) {
   const q = await searchParams;
-  const nextPath = safeNextPath(q.next ?? "");
+  const nextPath = safeNextPath(q.next ?? DEFAULT_POST_LOGIN);
+  const devQuickLoginEnabled =
+    process.env.NODE_ENV === "development" &&
+    Boolean(
+      process.env.DEV_LOGIN_EMAIL?.trim() && process.env.DEV_LOGIN_PASSWORD,
+    );
 
   return (
-    <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-6 py-16">
-      <h1 className="text-2xl font-semibold text-zinc-950 dark:text-zinc-50">
-        Sign in
-      </h1>
-      <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-        Magic link or Google. Configure providers and redirect URLs in the Supabase
-        dashboard.
-      </p>
+    <div className="fg-login-root">
+      <div className="fg-login-grid">
+        <div className="fg-login-story">
+          <p className="fg-login-badge" aria-hidden>
+            <span>◆</span> Learn, not cram
+          </p>
+          <h1>
+            Turn notes into{" "}
+            <span>cards that stick</span>
+          </h1>
+          <p>
+            Sign in once. Right after, you&apos;ll drop in a PDF and we&apos;ll prep it for
+            spaced practice — the part that actually builds retention.
+          </p>
+          <div className="fg-login-pipeline" aria-hidden>
+            <span className="fg-login-pipeline-item">PDF in</span>
+            <span className="fg-login-pipeline-arrow">→</span>
+            <span className="fg-login-pipeline-item">Smart chunks</span>
+            <span className="fg-login-pipeline-arrow">→</span>
+            <span className="fg-login-pipeline-item">Practice deck</span>
+            <span className="fg-login-pipeline-arrow">→</span>
+            <span className="fg-login-pipeline-item">SRS reviews</span>
+          </div>
+        </div>
 
-      {q.check_email ? (
-        <p className="mt-6 rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200">
-          Check your email for the sign-in link.
+        <div className="fg-login-card">
+          <h2 className="fg-login-card-title">Sign in</h2>
+          <p className="fg-login-card-sub">
+            Magic link or Google. Next stop: upload your first document.
+          </p>
+
+          {q.check_email ? (
+            <p className="fg-login-check" role="status">
+              Check your email for the sign-in link. When you click it, we&apos;ll take you
+              straight to the upload step.
+            </p>
+          ) : null}
+
+          {q.error ? (
+            <p className="fg-login-err" role="alert">
+              {q.error}
+            </p>
+          ) : null}
+
+          <LoginForms
+            nextPath={nextPath}
+            devQuickLoginEnabled={devQuickLoginEnabled}
+          />
+        </div>
+
+        <p className="fg-login-foot">
+          <Link href="/">Back to home</Link>
+          {" · "}
+          <Link href="/login?next=%2Fdecks">Library first</Link>
         </p>
-      ) : null}
-
-      {q.error ? (
-        <p className="mt-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
-          {q.error}
-        </p>
-      ) : null}
-
-      <LoginForms nextPath={nextPath} />
-
-      <p className="mt-10 text-center text-sm text-zinc-500">
-        <Link href="/" className="text-zinc-700 underline dark:text-zinc-300">
-          Back to home
-        </Link>
-      </p>
+      </div>
     </div>
   );
 }

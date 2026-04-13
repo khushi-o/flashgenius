@@ -5,5 +5,5 @@ export default function MarketingLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return children;
+  return <div className="min-h-full bg-black">{children}</div>;
 }

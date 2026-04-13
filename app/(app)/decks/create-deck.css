@@ -1,0 +1,390 @@
+/* New deck page shell (welcome + form) */
+
+.fg-new-page {
+  position: relative;
+  isolation: isolate;
+  min-height: calc(100vh - 3.5rem);
+  padding-top: 0.5rem;
+  padding-bottom: 3rem;
+}
+
+.fg-new-page::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 70% 45% at 15% 0%, rgba(14, 165, 233, 0.12), transparent 55%),
+    radial-gradient(ellipse 55% 40% at 95% 15%, rgba(99, 102, 241, 0.14), transparent 50%),
+    linear-gradient(180deg, #0a0a0b 0%, #09090b 40%, #0a0a0b 100%);
+}
+
+.fg-new-welcome {
+  max-width: 720px;
+  margin: 0 auto 1.25rem;
+  padding: 0 1rem;
+}
+
+.fg-new-welcome-inner {
+  border-radius: 16px;
+  padding: 1.25rem 1.35rem;
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.12), rgba(99, 102, 241, 0.1));
+  border: 1px solid rgba(63, 63, 70, 0.95);
+  box-shadow: 0 16px 40px -20px rgba(0, 0, 0, 0.5);
+}
+
+@media (min-width: 640px) {
+  .fg-new-welcome-inner {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 1rem 1.5rem;
+    align-items: center;
+    padding: 1.35rem 1.5rem;
+  }
+}
+
+.fg-new-welcome-kicker {
+  margin: 0 0 0.25rem;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #7dd3fc;
+}
+
+.fg-new-welcome-title {
+  margin: 0 0 0.4rem;
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: #fafafa;
+}
+
+.fg-new-welcome-text {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: #a1a1aa;
+  max-width: 42ch;
+}
+
+.fg-new-welcome-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+@media (min-width: 640px) {
+  .fg-new-welcome-steps {
+    border-left: 1px solid rgba(63, 63, 70, 0.9);
+    padding-left: 1.25rem;
+  }
+}
+
+.fg-new-welcome-step {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #71717a;
+}
+
+.fg-new-welcome-step-active {
+  color: #e4e4e7;
+}
+
+.fg-new-welcome-step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 9999px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  background: rgba(39, 39, 42, 0.95);
+  border: 1px solid #3f3f46;
+  color: #a1a1aa;
+}
+
+.fg-new-welcome-step-active .fg-new-welcome-step-num {
+  background: linear-gradient(135deg, #0284c7, #6366f1);
+  border-color: transparent;
+  color: #fff;
+}
+
+.fg-new-welcome-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem 1rem;
+  margin-top: 0.25rem;
+}
+
+@media (min-width: 640px) {
+  .fg-new-welcome-actions {
+    margin-top: 0.5rem;
+  }
+}
+
+.fg-new-welcome-dismiss {
+  padding: 0.45rem 1rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #fafafa;
+  background: rgba(24, 24, 27, 0.9);
+  border: 1px solid #3f3f46;
+  border-radius: 9999px;
+  cursor: pointer;
+}
+
+.fg-new-welcome-dismiss:hover {
+  border-color: #52525b;
+  background: #27272a;
+}
+
+.fg-new-welcome-library {
+  font-size: 0.78rem;
+  color: #7dd3fc;
+  text-decoration: none;
+}
+
+.fg-new-welcome-library:hover {
+  text-decoration: underline;
+}
+
+/* Create deck — Figma-inspired dark form (scoped .fg-create) */
+
+.fg-create {
+  --fg-accent: #0ea5e9;
+  --fg-accent-deep: #0284c7;
+  --fg-violet: #6366f1;
+  --fg-panel: #121212;
+  --fg-border: #2a2a2e;
+  --fg-muted: #9ca3af;
+  --fg-text: #fafafa;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 24px 20px 48px;
+}
+
+.fg-create-back {
+  display: inline-block;
+  font-size: 13px;
+  color: var(--fg-muted);
+  text-decoration: none;
+  margin-bottom: 20px;
+}
+
+.fg-create-back:hover {
+  color: var(--fg-text);
+}
+
+.fg-create-heading-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.fg-create-title {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: var(--fg-text);
+}
+
+.fg-create-dots {
+  display: flex;
+  gap: 6px;
+  padding-top: 10px;
+}
+
+.fg-create-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  background: #3f3f46;
+}
+
+.fg-create-dot-active {
+  background: linear-gradient(135deg, var(--fg-accent), var(--fg-violet));
+  box-shadow: 0 0 10px rgba(14, 165, 233, 0.45);
+}
+
+.fg-create-lead {
+  margin: 0 0 14px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--fg-muted);
+}
+
+.fg-create-tip {
+  margin: 0 0 28px;
+  padding: 12px 14px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: #a1a1aa;
+  background: rgba(39, 39, 42, 0.5);
+  border: 1px solid var(--fg-border);
+  border-radius: 10px;
+}
+
+.fg-create-tip strong {
+  color: #d4d4d8;
+}
+
+.fg-create-tip em {
+  font-style: normal;
+  color: #7dd3fc;
+}
+
+.fg-create-drop {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  padding: 28px 20px;
+  margin-bottom: 24px;
+  border: 1.5px dashed var(--fg-border);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+
+.fg-create-drop:hover {
+  border-color: rgba(14, 165, 233, 0.45);
+  background: rgba(14, 165, 233, 0.04);
+}
+
+.fg-create-file-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  font-size: 0;
+}
+
+.fg-create-drop:has(.fg-create-file-input:focus-visible) {
+  outline: 2px solid var(--fg-accent);
+  outline-offset: 2px;
+}
+
+.fg-create-drop-icon {
+  color: var(--fg-accent);
+  margin-bottom: 12px;
+}
+
+.fg-create-drop-title {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--fg-text);
+}
+
+.fg-create-drop-sub {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--fg-muted);
+}
+
+.fg-create-filename {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--fg-text);
+  text-align: center;
+  word-break: break-all;
+}
+
+.fg-create-filesize {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--fg-muted);
+}
+
+.fg-create-field {
+  margin-bottom: 18px;
+}
+
+.fg-create-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+  margin-bottom: 8px;
+}
+
+.fg-create-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  font-size: 15px;
+  color: var(--fg-text);
+  background: var(--fg-panel);
+  border: 1px solid var(--fg-border);
+  border-radius: 10px;
+  outline: none;
+}
+
+.fg-create-input::placeholder {
+  color: #6b7280;
+}
+
+.fg-create-input:focus {
+  border-color: rgba(14, 165, 233, 0.55);
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.12);
+}
+
+.fg-create-pipeline-note {
+  margin: 0 0 16px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #6b7280;
+}
+
+.fg-create-error {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #fecaca;
+  background: rgba(127, 29, 29, 0.35);
+  border: 1px solid rgba(248, 113, 113, 0.35);
+}
+
+.fg-create-submit {
+  width: 100%;
+  padding: 14px 20px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(105deg, var(--fg-accent-deep), var(--fg-violet));
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 6px 24px rgba(14, 165, 233, 0.2);
+}
+
+.fg-create-submit:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.fg-create-submit:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  filter: none;
+}

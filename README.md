@@ -43,7 +43,17 @@ npm run dev
 4. **Authentication → URL configuration:** set **Site URL** to `http://localhost:3000` (and your production URL later). Under **Redirect URLs**, add `http://localhost:3000/auth/callback` and the same for production.  
 5. Put **Project URL** and **anon public** key into `.env.local` as `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Do **not** put the service role key in the client; use it only in server code if you truly need it.
 
-**Demo PDFs on the home page** live in `public/demo/`. Regenerate anytime with `npm run demo-pdfs` (requires `pdf-lib`).
+### Supabase (Phase 2 — upload & extraction)
+
+1. In **SQL Editor**, also run [`supabase/migrations/002_storage_pdfs_update.sql`](./supabase/migrations/002_storage_pdfs_update.sql) (optional `UPDATE` policy on `pdfs` objects).  
+2. While signed in: **Library** → **New deck** → choose a PDF → **Upload & extract PDF**. Files go to `pdfs/{user_id}/{deck_id}/…`, text is chunked into `deck_chunks`, and the deck status becomes `ready` (LLM card generation is Phase 3).  
+3. Tune limits via `.env.local`: `MAX_UPLOAD_MB`, `CHUNK_CHAR_TARGET`, `CHUNK_OVERLAP_CHARS`, `MAX_CHUNKS_PER_DECK` (see `.env.example`).
+
+### Phase 3 — LLM flashcards
+
+1. Set **`GEMINI_API_KEY`** in `.env.local` (server-only; never `NEXT_PUBLIC_*`).  
+2. After a deck is **`ready`** (upload + extraction done), open **Library** and click **Generate cards** for that deck.  
+3. Optional: **`GENERATION_MAX_CHUNKS`**, **`MAX_CARDS_PER_DECK`**, **`DEDUPE_SIMILARITY_THRESHOLD`** to cap cost and near-duplicate fronts.
 
 ## License
 
