@@ -18,10 +18,18 @@ export async function POST(_request: Request, ctx: Ctx) {
     return NextResponse.json({ error: "Invalid deck id." }, { status: 400 });
   }
 
-  if (!checkGenerateRateLimit(auth.user.id)) {
+  const rate = checkGenerateRateLimit(auth.user.id);
+  if (!rate.ok) {
+    const mins = Math.max(1, Math.ceil(rate.retryAfterSec / 60));
     return NextResponse.json(
-      { error: "Too many generation requests. Try again in an hour." },
-      { status: 429 },
+      {
+        error: `Too many generation requests for this account. Try again in about ${mins} minute${mins === 1 ? "" : "s"}.`,
+        retry_after_sec: rate.retryAfterSec,
+      },
+      {
+        status: 429,
+        headers: { "Retry-After": String(rate.retryAfterSec) },
+      },
     );
   }
 

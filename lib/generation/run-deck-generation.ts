@@ -55,7 +55,7 @@ export async function runDeckGeneration(
     return {
       ok: false,
       message: "Server is missing GEMINI_API_KEY.",
-      httpStatus: 503,
+      httpStatus: 500,
     };
   }
 
@@ -198,8 +198,8 @@ export async function runDeckGeneration(
       return {
         ok: false,
         message: userMsg,
-        /** 503: model/network — avoid 502 which browsers conflate with platform errors */
-        httpStatus: 503,
+        /** 422: deck OK but no cards passed — usually Gemini/validation; not “site down”. */
+        httpStatus: 422,
         detail: lastApi ? lastApi.slice(0, 400) : undefined,
       };
     }

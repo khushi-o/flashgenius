@@ -39,8 +39,11 @@ export async function POST(request: Request, ctx: Ctx) {
 
   if (!process.env.GEMINI_API_KEY?.trim()) {
     return NextResponse.json(
-      { error: "Server is missing GEMINI_API_KEY for page summaries." },
-      { status: 503 },
+      {
+        error: "Server is missing GEMINI_API_KEY for page summaries.",
+        code: "GEMINI_KEY_MISSING",
+      },
+      { status: 500 },
     );
   }
 
@@ -112,8 +115,11 @@ export async function POST(request: Request, ctx: Ctx) {
     raw = await generateGeminiText(buildPageSummaryPrompt(pageText));
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Model error.";
-    /** 503 = upstream model / timeout — not an nginx “Bad Gateway”. */
-    return NextResponse.json({ error: "Could not generate summary.", detail: msg }, { status: 503 });
+    /** 422 = request OK but Gemini did not return usable text (timeouts, 404 model id, quota, etc.). */
+    return NextResponse.json(
+      { error: "Could not generate summary.", detail: msg, code: "GEMINI_UPSTREAM" },
+      { status: 422 },
+    );
   }
 
   const parsed = parsePageSummaryOutput(raw);
