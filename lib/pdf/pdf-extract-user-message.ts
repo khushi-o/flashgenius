@@ -1,5 +1,5 @@
 /**
- * Map pdf-parse / pdfjs failures to a safe, user-facing string (no stack traces).
+ * Map PDF.js extraction failures to a safe, user-facing string (no stack traces).
  */
 export function pdfExtractUserMessage(err: unknown): { error: string; code: string } {
   const msg = err instanceof Error ? err.message : String(err);

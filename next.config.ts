@@ -1,8 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /** pdf-parse pulls pdfjs-dist + @napi-rs/canvas — keep native bits external on Vercel. */
-  serverExternalPackages: ["pdf-parse", "pdfjs-dist", "@napi-rs/canvas"],
+  /** pdfjs-dist ships optional native canvas hooks — keep external on the server bundle. */
+  serverExternalPackages: ["pdfjs-dist", "@napi-rs/canvas"],
 };
 
 export default nextConfig;
