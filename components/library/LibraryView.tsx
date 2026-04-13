@@ -2,7 +2,11 @@
 
 import { DeleteDeckButton } from "@/components/decks/DeleteDeckButton";
 import { GenerateDeckButton } from "@/components/decks/GenerateDeckButton";
-import { createAndUploadPdf } from "@/lib/decks/upload-pdf-client";
+import {
+  ACCEPT_DECK_SOURCE,
+  isDeckSourceUploadFile,
+} from "@/lib/decks/upload-source-types";
+import { createAndUploadDeckSource } from "@/lib/decks/upload-pdf-client";
 import type { DeckCardStats } from "@/lib/library/card-buckets";
 import { masteryPercent } from "@/lib/library/card-buckets";
 import { splitDeckTitle, tonePresetLabel } from "@/lib/library/deck-display";
@@ -80,14 +84,14 @@ export function LibraryView({ displayName, decks, statsByDeckId, totals }: Libra
     async (file: File | null) => {
       setUploadErr(null);
       if (!file) return;
-      if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
-        setUploadErr("Please choose a PDF file.");
+      if (!isDeckSourceUploadFile(file)) {
+        setUploadErr("Please choose a PDF or Word .docx file.");
         return;
       }
       setUploadBusy(true);
       try {
         const title = stemFromFilename(file.name).slice(0, 200);
-        const { deckId } = await createAndUploadPdf(file, title);
+        const { deckId } = await createAndUploadDeckSource(file, title);
         router.push(`/decks/${deckId}/read`);
         router.refresh();
       } catch (e) {
@@ -247,7 +251,7 @@ export function LibraryView({ displayName, decks, statsByDeckId, totals }: Libra
         <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-p-sand/25 bg-p-navy-mid/30 px-6 py-14 transition hover:border-p-sage/40 hover:bg-p-sage/10">
           <input
             type="file"
-            accept="application/pdf,.pdf"
+            accept={ACCEPT_DECK_SOURCE}
             className="sr-only"
             disabled={uploadBusy}
             onChange={(e) => void onQuickUpload(e.target.files?.[0] ?? null)}
@@ -260,10 +264,10 @@ export function LibraryView({ displayName, decks, statsByDeckId, totals }: Libra
             )}
           </span>
           <p className="mt-4 text-sm font-medium text-p-cream">
-            {uploadBusy ? "Uploading and extracting…" : "Upload a PDF to create a new deck"}
+            {uploadBusy ? "Uploading and extracting…" : "Upload a PDF or .docx to create a new deck"}
           </p>
           <p className="mt-1 text-center text-xs text-p-sand-dim">
-            Uses the PDF file name as the deck title. For subject and custom names, use{" "}
+            Uses the file name as the deck title. For subject and custom names, use{" "}
             <Link href="/decks/new" className="text-p-sage-bright hover:text-p-cream hover:underline">
               New deck
             </Link>

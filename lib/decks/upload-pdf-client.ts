@@ -1,5 +1,5 @@
 /**
- * Browser-only: create a deck row then POST the PDF for extraction.
+ * Browser-only: create a deck row then POST a source file (PDF or .docx) for extraction.
  * Used by CreateDeckForm and the library quick-upload zone.
  */
 
@@ -13,7 +13,10 @@ async function parseResponseBody(res: Response): Promise<Record<string, unknown>
   }
 }
 
-export async function createAndUploadPdf(file: File, title: string): Promise<{ deckId: string }> {
+export async function createAndUploadDeckSource(
+  file: File,
+  title: string,
+): Promise<{ deckId: string }> {
   const trimmed = title.trim();
   if (!trimmed) throw new Error("Deck title is required.");
 
@@ -50,3 +53,6 @@ export async function createAndUploadPdf(file: File, title: string): Promise<{ d
 
   return { deckId };
 }
+
+/** @deprecated Use `createAndUploadDeckSource` — name kept for imports. */
+export const createAndUploadPdf = createAndUploadDeckSource;

@@ -1,11 +1,23 @@
-/** Magic bytes for PDF (ASCII "%PDF"). */
+/**
+ * Detect PDF by magic bytes. Some tools prepend BOM or junk before %PDF-;
+ * scan the first few KB for the header (PDF spec allows leading non-PDF bytes in some cases).
+ */
+export function findPdfHeaderOffset(buf: Buffer, maxScan = 2048): number {
+  const limit = Math.min(buf.length - 5, maxScan);
+  for (let i = 0; i <= limit; i++) {
+    if (
+      buf[i] === 0x25 &&
+      buf[i + 1] === 0x50 &&
+      buf[i + 2] === 0x44 &&
+      buf[i + 3] === 0x46
+    ) {
+      const after = buf[i + 4];
+      if (after === 0x2d || (after >= 0x31 && after <= 0x39)) return i;
+    }
+  }
+  return -1;
+}
+
 export function isPdfBuffer(buf: Buffer): boolean {
-  if (buf.length < 5) return false;
-  return (
-    buf[0] === 0x25 &&
-    buf[1] === 0x50 &&
-    buf[2] === 0x44 &&
-    buf[3] === 0x46 &&
-    (buf[4] === 0x2d || (buf[4] >= 0x31 && buf[4] <= 0x39))
-  );
+  return findPdfHeaderOffset(buf) >= 0;
 }

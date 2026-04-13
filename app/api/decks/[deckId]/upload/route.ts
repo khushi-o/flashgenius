@@ -1,6 +1,8 @@
 import { requireSessionUser } from "@/lib/api/route-auth";
 import { chunkCharTarget, chunkOverlapChars, maxPdfPagesStored, maxUploadBytes } from "@/lib/constants/uploads";
 import { isMissingDeckPagesRelationError } from "@/lib/supabase/deck-pages-errors";
+import { DOCX_MIME } from "@/lib/decks/upload-source-types";
+import { extractDocxText } from "@/lib/docx/extract-docx-text";
 import { chunkPlainText } from "@/lib/pdf/chunk-plaintext";
 import { extractPdfText } from "@/lib/pdf/extract-text";
 import { isPdfBuffer } from "@/lib/pdf/is-pdf";
@@ -40,6 +42,21 @@ type Ctx = { params: Promise<{ deckId: string }> };
 
 function devDetail(message: string) {
   return process.env.NODE_ENV === "development" ? { detail: message } : {};
+}
+
+function looksDocxUpload(entry: File): boolean {
+  const name = (entry.name || "").toLowerCase();
+  const t = (entry.type || "").toLowerCase();
+  return name.endsWith(".docx") || t === DOCX_MIME.toLowerCase();
+}
+
+function storageFilenameForKind(rawName: string, kind: "pdf" | "docx"): string {
+  const def = kind === "pdf" ? "upload.pdf" : "upload.docx";
+  const base = sanitizeFilenameSegment(rawName || def);
+  const ext = kind === "pdf" ? ".pdf" : ".docx";
+  if (base.toLowerCase().endsWith(ext)) return base;
+  const trimmed = base.replace(/\.[^.]+$/, "");
+  return `${trimmed || "upload"}${ext}`;
 }
 
 export async function POST(request: Request, ctx: Ctx) {
@@ -98,14 +115,21 @@ export async function POST(request: Request, ctx: Ctx) {
   }
 
   const buf = Buffer.from(await entry.arrayBuffer());
-  if (!isPdfBuffer(buf)) {
+  const isPdf = isPdfBuffer(buf);
+  const isDocx = looksDocxUpload(entry);
+  if (!isPdf && !isDocx) {
     return NextResponse.json(
-      { error: "Not a valid PDF (missing %PDF header)." },
+      {
+        error:
+          "Upload a PDF or a Word document (.docx). Legacy .doc is not supported — save as .docx in Word or Google Docs.",
+      },
       { status: 400 },
     );
   }
 
-  const safeName = sanitizeFilenameSegment(entry.name || "upload.pdf");
+  const kind: "pdf" | "docx" = isPdf ? "pdf" : "docx";
+  const storageContentType = kind === "pdf" ? "application/pdf" : DOCX_MIME;
+  const safeName = storageFilenameForKind(entry.name, kind);
   const objectPath = `${user.id}/${deckRow.id}/${Date.now()}-${safeName}`;
 
   try {
@@ -116,7 +140,7 @@ export async function POST(request: Request, ctx: Ctx) {
       .eq("user_id", user.id);
 
     const { error: upErr } = await supabase.storage.from("pdfs").upload(objectPath, buf, {
-      contentType: "application/pdf",
+      contentType: storageContentType,
       upsert: false,
     });
 
@@ -125,7 +149,7 @@ export async function POST(request: Request, ctx: Ctx) {
         supabase,
         deckRow.id,
         user.id,
-        "Could not store PDF. Try again.",
+        "Could not store source file. Try again.",
       );
       return NextResponse.json(
         {
@@ -148,52 +172,85 @@ export async function POST(request: Request, ctx: Ctx) {
 
     let text: string;
     let pageRows: { page_number: number; content: string }[] = [];
-    try {
-      const extracted = await extractPdfText(buf);
-      text = extracted.fullText;
-      const cap = maxPdfPagesStored();
-      const maxChars = 120_000;
-      pageRows = extracted.pages
-        .filter((p) => p.text.length > 0)
-        .slice(0, cap)
-        .map((p) => ({
-          page_number: p.pageNumber,
-          content: stripNulBytes(p.text).slice(0, maxChars),
-        }));
-      if (!pageRows.length && text.length > 0) {
-        pageRows = [
-          {
-            page_number: 1,
-            content: stripNulBytes(text).slice(0, maxChars),
-          },
-        ];
+    const maxChars = 120_000;
+    const pageCap = maxPdfPagesStored();
+
+    if (kind === "pdf") {
+      try {
+        const extracted = await extractPdfText(buf);
+        text = extracted.fullText;
+        pageRows = extracted.pages
+          .filter((p) => p.text.length > 0)
+          .slice(0, pageCap)
+          .map((p) => ({
+            page_number: p.pageNumber,
+            content: stripNulBytes(p.text).slice(0, maxChars),
+          }));
+        if (!pageRows.length && text.length > 0) {
+          pageRows = [
+            {
+              page_number: 1,
+              content: stripNulBytes(text).slice(0, maxChars),
+            },
+          ];
+        }
+      } catch (extractErr) {
+        await setDeckError(
+          supabase,
+          deckRow.id,
+          user.id,
+          "Could not read text from this PDF.",
+        );
+        const msg =
+          extractErr instanceof Error ? extractErr.message : "PDF text extraction failed.";
+        return NextResponse.json(
+          { error: "PDF text extraction failed (file may be image-only).", ...devDetail(msg) },
+          { status: 422 },
+        );
       }
-    } catch (extractErr) {
-      await setDeckError(
-        supabase,
-        deckRow.id,
-        user.id,
-        "Could not read text from this PDF.",
-      );
-      const msg =
-        extractErr instanceof Error ? extractErr.message : "PDF text extraction failed.";
-      return NextResponse.json(
-        { error: "PDF text extraction failed (file may be image-only).", ...devDetail(msg) },
-        { status: 422 },
-      );
+    } else {
+      try {
+        text = await extractDocxText(buf);
+      } catch (extractErr) {
+        await setDeckError(
+          supabase,
+          deckRow.id,
+          user.id,
+          "Could not read text from this Word file.",
+        );
+        const msg =
+          extractErr instanceof Error ? extractErr.message : "Word document text extraction failed.";
+        return NextResponse.json(
+          {
+            error:
+              "Could not read this .docx file (it may be corrupt or not a real Word document).",
+            ...devDetail(msg),
+          },
+          { status: 422 },
+        );
+      }
+      text = text.trim();
+      if (text.length > 0) {
+        pageRows = [{ page_number: 1, content: stripNulBytes(text).slice(0, maxChars) }];
+      }
     }
 
     text = stripNulBytes(text);
 
-    if (!text) {
+    if (!text.trim()) {
       await setDeckError(
         supabase,
         deckRow.id,
         user.id,
-        "No extractable text in this PDF.",
+        kind === "pdf" ? "No extractable text in this PDF." : "No extractable text in this document.",
       );
       return NextResponse.json(
-        { error: "No extractable text in this PDF." },
+        {
+          error:
+            kind === "pdf"
+              ? "No extractable text in this PDF."
+              : "No extractable text in this document.",
+        },
         { status: 422 },
       );
     }

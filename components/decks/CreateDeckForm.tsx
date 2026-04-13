@@ -1,6 +1,10 @@
 "use client";
 
-import { createAndUploadPdf } from "@/lib/decks/upload-pdf-client";
+import {
+  ACCEPT_DECK_SOURCE,
+  isDeckSourceUploadFile,
+} from "@/lib/decks/upload-source-types";
+import { createAndUploadDeckSource } from "@/lib/decks/upload-pdf-client";
 import { BackToLibraryLink } from "@/components/ui/back-to-library-link";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -36,26 +40,31 @@ export function CreateDeckForm() {
   const [error, setError] = useState<string | null>(null);
 
   const onFile = useCallback((f: File | null) => {
-    setFile(f);
     setError(null);
+    if (f && !isDeckSourceUploadFile(f)) {
+      setFile(null);
+      setError("Choose a PDF or a Word .docx file (legacy .doc is not supported).");
+      return;
+    }
+    setFile(f);
     if (f && !deckName) setDeckName(stemFromFilename(f.name));
   }, [deckName]);
 
   async function uploadAndExtract() {
     setError(null);
     if (!file) {
-      setError("Choose a PDF first.");
+      setError("Choose a PDF or Word .docx file first.");
       return;
     }
     const title = buildDeckTitle(deckName, subject, file);
     if (!title) {
-      setError("Add a deck name or use a PDF with a valid filename.");
+      setError("Add a deck name or use a file with a valid filename.");
       return;
     }
 
     setBusy(true);
     try {
-      const { deckId } = await createAndUploadPdf(file, title);
+      const { deckId } = await createAndUploadDeckSource(file, title);
       router.push(`/decks/${deckId}/read`);
       router.refresh();
     } catch (e) {
@@ -78,14 +87,14 @@ export function CreateDeckForm() {
         </div>
       </div>
       <p className="fg-create-lead">
-        Drop a PDF — notes, a textbook chapter, anything with real text. We store it
+        Drop a PDF or Word (.docx) — notes, a chapter, anything with real text. We store it
         safely, pull out readable chunks, then you run{" "}
         <strong>Generate cards</strong> from the Library when you&apos;re ready (server
         needs <code className="rounded bg-black/30 px-1">GEMINI_API_KEY</code>).
       </p>
       <p className="fg-create-tip">
         <strong>Why duplicates?</strong> Each time you finish this flow we create a{" "}
-        <em>new</em> library deck (new row), even if the PDF name is the same. Use{" "}
+        <em>new</em> library deck (new row), even if the file name is the same. Use{" "}
         <Link href="/decks" className="text-p-sage-bright hover:text-p-cream hover:underline">
           Library
         </Link>{" "}
@@ -95,9 +104,9 @@ export function CreateDeckForm() {
       <label className="fg-create-drop">
         <input
           type="file"
-          accept="application/pdf,.pdf"
+          accept={ACCEPT_DECK_SOURCE}
           className="fg-create-file-input"
-          aria-label="Choose PDF file"
+          aria-label="Choose PDF or Word document"
           onChange={(e) => onFile(e.target.files?.[0] ?? null)}
         />
         <span className="fg-create-drop-icon" aria-hidden>
@@ -123,7 +132,7 @@ export function CreateDeckForm() {
           </>
         ) : (
           <>
-            <span className="fg-create-drop-title">Drop a PDF here</span>
+            <span className="fg-create-drop-title">Drop a PDF or .docx here</span>
             <span className="fg-create-drop-sub">or click to browse</span>
           </>
         )}
@@ -167,9 +176,9 @@ export function CreateDeckForm() {
 
       <p className="fg-create-pipeline-note">
         Max size respects <code className="rounded bg-black/30 px-1">MAX_UPLOAD_MB</code>{" "}
-        (default 20). Only PDFs with a real <strong>text layer</strong> work well — scanned or
-        “flattened” pages can look long but extract almost nothing, which limits cards. Prefer
-        export-as-PDF from the app where you authored the notes.
+        (default 20). PDFs need a real <strong>text layer</strong> (scanned pages extract little).
+        For Word, use <strong>.docx</strong> — not legacy .doc. Prefer export-as-PDF or Save as
+        .docx from the app where you wrote the notes.
       </p>
 
       <button
@@ -178,7 +187,7 @@ export function CreateDeckForm() {
         disabled={busy || !file}
         onClick={uploadAndExtract}
       >
-        {busy ? "Uploading & extracting…" : "Upload & extract PDF"}
+        {busy ? "Uploading & extracting…" : "Upload & extract"}
       </button>
     </div>
   );
