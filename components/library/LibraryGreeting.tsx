@@ -2,7 +2,7 @@
 
 import { updateDisplayName } from "@/lib/actions/profile";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 
 function UserCircleIcon({ className }: { className?: string }) {
   return (
@@ -27,10 +27,6 @@ export function LibraryGreeting({ initialDisplayName }: Props) {
   const [editing, setEditing] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-
-  useEffect(() => {
-    setSavedName((initialDisplayName ?? "").trim());
-  }, [initialDisplayName]);
 
   function save() {
     setErr(null);

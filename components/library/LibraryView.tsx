@@ -124,7 +124,7 @@ export function LibraryView({
       <header className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0 flex-1">
           <h1 className="text-3xl font-semibold tracking-tight text-p-cream">Your library</h1>
-          <LibraryGreeting initialDisplayName={displayName} />
+          <LibraryGreeting key={displayName ?? "__none"} initialDisplayName={displayName} />
         </div>
         <div className="flex flex-col gap-3 sm:items-end">
           <div className="relative w-full sm:w-72">

@@ -35,7 +35,7 @@ export async function POST(request: Request, ctx: Ctx) {
     return NextResponse.json({ error: "Invalid deck or page." }, { status: 400 });
   }
 
-  const { supabase, user } = auth;
+  const { supabase } = auth;
 
   if (!process.env.GEMINI_API_KEY?.trim()) {
     return NextResponse.json(
