@@ -1,9 +1,10 @@
 # ─── FlashGenius — never commit secrets or local-only state ───
 
-# Markdown: README + architecture tracked; other *.md stay local
+# Markdown: README + architecture tracked; other *.md stay local (incl. hiring write-ups)
 *.md
 !README.md
 !docs/ARCHITECTURE.md
+SUBMISSION.md
 
 # Spec / process docs — keep local only (not in public clone)
 docs/COMPLETE_REFERENCE.md
