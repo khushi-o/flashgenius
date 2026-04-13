@@ -29,7 +29,12 @@ function buildDeckTitle(deckName: string, subject: string, file: File) {
   return name.slice(0, 200);
 }
 
-export function CreateDeckForm() {
+export type CreateDeckFormProps = {
+  /** From server `getServerMaxUploadMb()` — must match `MAX_UPLOAD_MB`. */
+  maxUploadMb: number;
+};
+
+export function CreateDeckForm({ maxUploadMb }: CreateDeckFormProps) {
   const router = useRouter();
   const idDeck = useId();
   const idSubject = useId();
@@ -39,16 +44,28 @@ export function CreateDeckForm() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const onFile = useCallback((f: File | null) => {
-    setError(null);
-    if (f && !isDeckSourceUploadFile(f)) {
-      setFile(null);
-      setError("Choose a PDF or a Word .docx file (legacy .doc is not supported).");
-      return;
-    }
-    setFile(f);
-    if (f && !deckName) setDeckName(stemFromFilename(f.name));
-  }, [deckName]);
+  const maxBytes = maxUploadMb * 1024 * 1024;
+
+  const onFile = useCallback(
+    (f: File | null) => {
+      setError(null);
+      if (f && !isDeckSourceUploadFile(f)) {
+        setFile(null);
+        setError("Choose a PDF or a Word .docx file (legacy .doc is not supported).");
+        return;
+      }
+      if (f && f.size > maxBytes) {
+        setFile(null);
+        setError(
+          `This file is ${(f.size / (1024 * 1024)).toFixed(1)} MB. Max is ${maxUploadMb} MB — raise MAX_UPLOAD_MB in .env.local and restart.`,
+        );
+        return;
+      }
+      setFile(f);
+      if (f && !deckName) setDeckName(stemFromFilename(f.name));
+    },
+    [deckName, maxBytes, maxUploadMb],
+  );
 
   async function uploadAndExtract() {
     setError(null);
@@ -64,7 +81,7 @@ export function CreateDeckForm() {
 
     setBusy(true);
     try {
-      const { deckId } = await createAndUploadDeckSource(file, title);
+      const { deckId } = await createAndUploadDeckSource(file, title, { maxUploadMb });
       router.push(`/decks/${deckId}/read`);
       router.refresh();
     } catch (e) {
@@ -176,7 +193,8 @@ export function CreateDeckForm() {
 
       <p className="fg-create-pipeline-note">
         Max size respects <code className="rounded bg-black/30 px-1">MAX_UPLOAD_MB</code>{" "}
-        (default 20). PDFs need a real <strong>text layer</strong> (scanned pages extract little).
+        (currently {maxUploadMb} MB on this server). PDFs need a real <strong>text layer</strong>{" "}
+        (scanned pages extract little).
         For Word, use <strong>.docx</strong> — not legacy .doc. Prefer export-as-PDF or Save as
         .docx from the app where you wrote the notes.
       </p>

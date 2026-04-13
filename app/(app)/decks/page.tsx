@@ -1,4 +1,5 @@
 import { LibraryView, type LibraryDeckRow } from "@/components/library/LibraryView";
+import { getServerMaxUploadMb } from "@/lib/constants/uploads";
 import { createClient } from "@/lib/supabase/server";
 import {
   aggregateDeckStats,
@@ -87,12 +88,15 @@ export default async function DecksPage() {
       ? profile.display_name.trim()
       : null;
 
+  const maxUploadMb = getServerMaxUploadMb();
+
   return (
     <LibraryView
       displayName={displayName}
       decks={list}
       statsByDeckId={statsByDeckId}
       totals={totals}
+      maxUploadMb={maxUploadMb}
     />
   );
 }

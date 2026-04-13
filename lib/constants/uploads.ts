@@ -1,11 +1,22 @@
 const mb = (n: number) => n * 1024 * 1024;
 
-/** Server-side max upload bytes (default 20 MB; set `MAX_UPLOAD_MB` up to 500). */
+/** When `MAX_UPLOAD_MB` is unset, the server uses this default (see `getServerMaxUploadMb()` for UI). */
+export const DEFAULT_MAX_UPLOAD_MB = 50;
+
+/** Server-side max upload bytes (`MAX_UPLOAD_MB`, 1–500; default 50 MB). */
 export function maxUploadBytes(): number {
   const raw = process.env.MAX_UPLOAD_MB;
-  const n = raw ? Number.parseInt(raw, 10) : 20;
-  if (!Number.isFinite(n) || n < 1) return mb(20);
+  const n = raw ? Number.parseInt(raw, 10) : DEFAULT_MAX_UPLOAD_MB;
+  if (!Number.isFinite(n) || n < 1) return mb(DEFAULT_MAX_UPLOAD_MB);
   return mb(Math.min(n, 500));
+}
+
+/**
+ * Resolved upload limit in MB (`MAX_UPLOAD_MB`). Intended for Server Components to pass into
+ * client upload UI so the browser limit matches the API.
+ */
+export function getServerMaxUploadMb(): number {
+  return Math.round(maxUploadBytes() / (1024 * 1024));
 }
 
 export function chunkCharTarget(): number {

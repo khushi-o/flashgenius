@@ -13,12 +13,25 @@ async function parseResponseBody(res: Response): Promise<Record<string, unknown>
   }
 }
 
+export type DeckUploadClientOptions = {
+  /** Must match server `MAX_UPLOAD_MB` (passed from a Server Component). */
+  maxUploadMb: number;
+};
+
 export async function createAndUploadDeckSource(
   file: File,
   title: string,
+  options: DeckUploadClientOptions,
 ): Promise<{ deckId: string }> {
   const trimmed = title.trim();
   if (!trimmed) throw new Error("Deck title is required.");
+
+  const maxBytes = Math.max(1, options.maxUploadMb) * 1024 * 1024;
+  if (file.size > maxBytes) {
+    throw new Error(
+      `File too large (${(file.size / (1024 * 1024)).toFixed(1)} MB). Max is ${options.maxUploadMb} MB — raise MAX_UPLOAD_MB in .env.local and restart.`,
+    );
+  }
 
   const createRes = await fetch("/api/decks", {
     method: "POST",

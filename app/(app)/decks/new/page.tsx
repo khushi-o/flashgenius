@@ -1,5 +1,6 @@
 import { CreateDeckForm } from "@/components/decks/CreateDeckForm";
 import { NewDeckWelcome } from "@/components/decks/NewDeckWelcome";
+import { getServerMaxUploadMb } from "@/lib/constants/uploads";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
@@ -15,13 +16,15 @@ export default async function NewDeckPage() {
     redirect("/login?next=/decks/new%3Fwelcome%3D1");
   }
 
+  const maxUploadMb = getServerMaxUploadMb();
+
   return (
     <div className="fg-new-page w-full">
       <Suspense fallback={null}>
         <NewDeckWelcome />
       </Suspense>
       <div className="mx-auto w-full max-w-6xl flex-1 px-4 pb-14 pt-2 sm:px-8 lg:px-12">
-        <CreateDeckForm />
+        <CreateDeckForm maxUploadMb={maxUploadMb} />
       </div>
     </div>
   );

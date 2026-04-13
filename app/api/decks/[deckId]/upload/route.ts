@@ -90,11 +90,38 @@ export async function POST(request: Request, ctx: Ctx) {
     );
   }
 
+  const maxBytes = maxUploadBytes();
+  const maxMb = Math.round(maxBytes / (1024 * 1024));
+
   let formData: FormData;
   try {
     formData = await request.formData();
-  } catch {
-    return NextResponse.json({ error: "Invalid form data." }, { status: 400 });
+  } catch (e) {
+    const cl = request.headers.get("content-length");
+    const contentLen = cl ? Number.parseInt(cl, 10) : NaN;
+    const approxMb = Number.isFinite(contentLen)
+      ? Math.max(1, Math.round(contentLen / (1024 * 1024)))
+      : null;
+    const msg = e instanceof Error ? e.message : String(e);
+    if (Number.isFinite(contentLen) && contentLen > maxBytes) {
+      return NextResponse.json(
+        {
+          error: `File too large (about ${approxMb} MB; max ${maxMb} MB). Raise MAX_UPLOAD_MB in .env.local.`,
+          ...devDetail(msg),
+        },
+        { status: 413 },
+      );
+    }
+    return NextResponse.json(
+      {
+        error:
+          approxMb != null && approxMb > maxMb
+            ? `Upload may be too large (about ${approxMb} MB; max ${maxMb} MB). Raise MAX_UPLOAD_MB, restart the dev server, and try again.`
+            : `Could not read the upload. Max file size is ${maxMb} MB. If the file is large or you raised the limit, set MAX_UPLOAD_MB (and restart).`,
+        ...devDetail(msg),
+      },
+      { status: 400 },
+    );
   }
 
   const entry = formData.get("file");
@@ -106,7 +133,6 @@ export async function POST(request: Request, ctx: Ctx) {
     return NextResponse.json({ error: "Empty file." }, { status: 400 });
   }
 
-  const maxBytes = maxUploadBytes();
   if (entry.size > maxBytes) {
     return NextResponse.json(
       { error: `File too large (max ${Math.round(maxBytes / (1024 * 1024))} MB).` },

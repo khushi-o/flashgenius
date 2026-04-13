@@ -30,6 +30,8 @@ export type LibraryViewProps = {
   decks: LibraryDeckRow[];
   statsByDeckId: Record<string, DeckCardStats>;
   totals: { deckCount: number; totalCards: number; dueStudy: number };
+  /** From server `getServerMaxUploadMb()` — must match `MAX_UPLOAD_MB`. */
+  maxUploadMb: number;
 };
 
 function stemFromFilename(name: string) {
@@ -63,7 +65,13 @@ function outlineBtnClass(extra?: string) {
   return `tap-scale inline-flex min-h-11 min-w-[2.75rem] items-center justify-center rounded-xl border border-p-sand/20 bg-p-navy-mid/50 px-4 py-2.5 text-xs font-semibold text-p-cream transition-[background-color,border-color,color] duration-150 hover:border-p-sage/35 hover:bg-p-navy/70 active:bg-p-navy-mid [-webkit-tap-highlight-color:transparent] ${extra ?? ""}`;
 }
 
-export function LibraryView({ displayName, decks, statsByDeckId, totals }: LibraryViewProps) {
+export function LibraryView({
+  displayName,
+  decks,
+  statsByDeckId,
+  totals,
+  maxUploadMb,
+}: LibraryViewProps) {
   const router = useRouter();
   const searchId = useId();
   const [query, setQuery] = useState("");
@@ -80,6 +88,8 @@ export function LibraryView({ displayName, decks, statsByDeckId, totals }: Libra
     });
   }, [decks, query]);
 
+  const maxBytes = maxUploadMb * 1024 * 1024;
+
   const onQuickUpload = useCallback(
     async (file: File | null) => {
       setUploadErr(null);
@@ -88,10 +98,16 @@ export function LibraryView({ displayName, decks, statsByDeckId, totals }: Libra
         setUploadErr("Please choose a PDF or Word .docx file.");
         return;
       }
+      if (file.size > maxBytes) {
+        setUploadErr(
+          `This file is ${(file.size / (1024 * 1024)).toFixed(1)} MB. Max is ${maxUploadMb} MB — raise MAX_UPLOAD_MB in .env.local and restart.`,
+        );
+        return;
+      }
       setUploadBusy(true);
       try {
         const title = stemFromFilename(file.name).slice(0, 200);
-        const { deckId } = await createAndUploadDeckSource(file, title);
+        const { deckId } = await createAndUploadDeckSource(file, title, { maxUploadMb });
         router.push(`/decks/${deckId}/read`);
         router.refresh();
       } catch (e) {
@@ -100,7 +116,7 @@ export function LibraryView({ displayName, decks, statsByDeckId, totals }: Libra
         setUploadBusy(false);
       }
     },
-    [router],
+    [maxBytes, maxUploadMb, router],
   );
 
   return (
