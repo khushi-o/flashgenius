@@ -104,18 +104,13 @@ export function CreateDeckForm({ maxUploadMb }: CreateDeckFormProps) {
         </div>
       </div>
       <p className="fg-create-lead">
-        Drop a PDF or Word (.docx) — notes, a chapter, anything with real text. We store it
-        safely, pull out readable chunks, then you run{" "}
-        <strong>Generate cards</strong> from the Library when you&apos;re ready (server
-        needs <code className="rounded bg-black/30 px-1">GEMINI_API_KEY</code>).
-      </p>
-      <p className="fg-create-tip">
-        <strong>Why duplicates?</strong> Each time you finish this flow we create a{" "}
-        <em>new</em> library deck (new row), even if the file name is the same. Use{" "}
+        Upload a <strong>PDF</strong> or <strong>Word .docx</strong> (max {maxUploadMb} MB). The
+        file must have <strong>selectable text</strong> — scanned or “flattened” PDFs usually
+        won&apos;t work. After upload, open{" "}
         <Link href="/decks" className="text-p-sage-bright hover:text-p-cream hover:underline">
           Library
         </Link>{" "}
-        to pick the deck you want, then <strong>View cards</strong> after generation.
+        and run <strong>Generate cards</strong>.
       </p>
 
       <label className="fg-create-drop">
@@ -190,14 +185,6 @@ export function CreateDeckForm({ maxUploadMb }: CreateDeckFormProps) {
           {error}
         </p>
       ) : null}
-
-      <p className="fg-create-pipeline-note">
-        Max size respects <code className="rounded bg-black/30 px-1">MAX_UPLOAD_MB</code>{" "}
-        (currently {maxUploadMb} MB on this server). PDFs need a real <strong>text layer</strong>{" "}
-        (scanned pages extract little).
-        For Word, use <strong>.docx</strong> — not legacy .doc. Prefer export-as-PDF or Save as
-        .docx from the app where you wrote the notes.
-      </p>
 
       <button
         type="button"

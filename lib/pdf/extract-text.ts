@@ -1,4 +1,5 @@
 import { maxPdfPagesStored } from "@/lib/constants/uploads";
+import { extractPdfTextViaPdfjs } from "@/lib/pdf/extract-text-fallback";
 
 export type PdfPageText = { pageNumber: number; text: string };
 
@@ -59,7 +60,29 @@ export async function extractPdfText(buffer: Buffer): Promise<{
       }
     }
 
-    return { fullText, pages };
+    let out: { fullText: string; pages: PdfPageText[] } = { fullText, pages };
+    if (!out.fullText.trim() && out.pages.length === 0) {
+      try {
+        const fb = await extractPdfTextViaPdfjs(buffer);
+        if (fb.fullText.trim().length > 0 || fb.pages.length > 0) {
+          out = { fullText: fb.fullText, pages: fb.pages };
+        }
+      } catch (emptyFbErr) {
+        console.warn("[pdf] fallback after empty primary", emptyFbErr);
+      }
+    }
+    return out;
+  } catch (primaryErr) {
+    console.warn("[pdf] primary PDFParse extract failed, trying pdfjs fallback", primaryErr);
+    try {
+      const fb = await extractPdfTextViaPdfjs(buffer);
+      if (fb.fullText.length > 0 || fb.pages.length > 0) {
+        return { fullText: fb.fullText, pages: fb.pages };
+      }
+    } catch (fbErr) {
+      console.warn("[pdf] fallback extract failed", fbErr);
+    }
+    throw primaryErr;
   } finally {
     await parser?.destroy().catch(() => undefined);
   }
