@@ -1,4 +1,4 @@
-import "@/lib/pdf/install-pdfjs-node-polyfills";
+import "@/lib/pdf/configure-pdfjs-worker";
 import { maxPdfPagesStored } from "@/lib/constants/uploads";
 import { slicePdfFromDetectedHeader } from "@/lib/pdf/is-pdf";
 import { isPdfExtractFatalError } from "@/lib/pdf/pdf-extract-user-message";
@@ -38,8 +38,6 @@ async function extractWithPdfjsModule(
   buffer: Buffer,
   disableFontFace: boolean,
 ): Promise<{ fullText: string; pages: PdfPageText[] }> {
-  pdfjs.GlobalWorkerOptions.workerSrc = "";
-
   const data = new Uint8Array(buffer);
   const loadingTask = pdfjs.getDocument({
     data,
@@ -96,7 +94,6 @@ async function extractWithPdfParse(buffer: Buffer): Promise<{ fullText: string; 
   let lastErr: unknown;
   try {
     const { PDFParse } = await import("pdf-parse");
-    PDFParse.setWorker("");
 
     type ParserInstance = InstanceType<typeof PDFParse>;
     const variants: Array<Record<string, unknown>> = [
