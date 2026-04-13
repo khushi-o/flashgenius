@@ -119,191 +119,161 @@ export function DeckBookReader({
 
   if (!total) {
     return (
-      <div className="flex min-h-[calc(100dvh-8rem)] flex-col items-center justify-center gap-6 px-6 text-center">
+      <div className="flex min-h-[calc(100dvh-8rem)] flex-col items-center justify-center gap-5 px-4 text-center">
         <BackToLibraryLink className="-ml-1" />
-        <p className="max-w-md text-sm leading-relaxed text-p-sand-dim">
+        <p className="max-w-md text-p-sand-dim">
           No per-page text for this deck yet. Re-upload the PDF to build the book view (older
           decks only have chunks).
         </p>
-        <div className="flex flex-wrap items-center justify-center gap-3">
-          <Link
-            href="/decks/new"
-            className="tap-scale inline-flex min-h-11 items-center justify-center rounded-xl bg-gradient-to-r from-p-sage to-p-sage-muted px-5 py-2.5 text-sm font-semibold text-p-navy shadow-sm shadow-black/25 hover:brightness-105 [-webkit-tap-highlight-color:transparent]"
-          >
-            New upload
-          </Link>
-          <Link
-            href={`/decks/${deckId}`}
-            className="tap-scale inline-flex min-h-11 items-center rounded-xl border border-p-sand/25 px-5 py-2.5 text-sm font-medium text-p-sage-bright transition-colors hover:bg-p-sage/10 [-webkit-tap-highlight-color:transparent]"
-          >
-            Deck & cards
-          </Link>
-        </div>
+        <Link
+          href="/decks/new"
+          className="tap-scale inline-flex min-h-11 items-center justify-center rounded-xl bg-gradient-to-r from-p-sage to-p-sage-muted px-5 py-2.5 text-sm font-semibold text-p-navy shadow-sm shadow-black/25 hover:brightness-105 [-webkit-tap-highlight-color:transparent]"
+        >
+          New upload
+        </Link>
+        <Link
+          href={`/decks/${deckId}`}
+          className="tap-scale inline-flex min-h-11 items-center text-sm font-medium text-p-sage-bright transition-colors duration-150 hover:text-p-cream hover:underline [-webkit-tap-highlight-color:transparent]"
+        >
+          Deck & cards
+        </Link>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-[calc(100dvh-3.5rem)] flex-1 flex-col bg-gradient-to-b from-p-navy-deep via-[#0a0d14] to-p-navy-deep text-p-cream">
+    <div className="flex min-h-[calc(100dvh-3.5rem)] flex-1 flex-col bg-p-navy-deep text-p-cream">
       {chunkFallbackBanner ? (
-        <div className="border-b border-amber-900/50 bg-amber-950/25 px-4 py-2.5 text-center text-xs leading-relaxed text-amber-100/90 sm:px-6">
+        <div className="border-b border-amber-900/50 bg-amber-950/25 px-3 py-2 text-center text-xs leading-relaxed text-amber-100/90 sm:px-4">
           You&apos;re reading <strong className="text-amber-50">extraction sections</strong> (no{" "}
           <code className="rounded bg-black/30 px-1">deck_pages</code> table yet). Run{" "}
           <code className="rounded bg-black/30 px-1">003_deck_pages.sql</code> in Supabase, then
           re-upload for true page-by-page layout and saved summaries.
         </div>
       ) : null}
-
-      <header className="shrink-0 border-b border-p-sand/10 bg-p-navy-mid/35 px-4 py-3 backdrop-blur-sm sm:px-6">
-        <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-3 sm:gap-4">
-          <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center">
-            <BackToLibraryLink className="-ml-1 shrink-0 text-xs sm:text-sm" />
-            <span className="hidden h-9 w-px shrink-0 bg-p-sand/15 sm:block" aria-hidden />
-            <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-p-sage-bright/85">
-                {mode === "sections" ? "Reader · sections" : "Book view"}
-              </p>
-              <h1 className="mt-1 line-clamp-2 text-base font-semibold leading-snug tracking-tight text-p-cream sm:line-clamp-1 sm:text-lg">
-                {deckTitle}
-              </h1>
-            </div>
-          </div>
-          <div className="flex w-full shrink-0 flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
-            <Link
-              href={`/decks/${deckId}`}
-              className="tap-scale inline-flex min-h-10 flex-1 items-center justify-center rounded-xl border border-p-sand/20 bg-p-navy-deep/60 px-4 py-2 text-xs font-semibold text-p-cream transition-colors hover:border-p-sage/35 hover:bg-p-navy-mid sm:flex-none [-webkit-tap-highlight-color:transparent]"
-            >
-              Cards
-            </Link>
-            <Link
-              href={`/study?deck_id=${encodeURIComponent(deckId)}`}
-              className="tap-scale inline-flex min-h-10 flex-1 items-center justify-center rounded-xl border border-p-sage/40 bg-p-sage/12 px-4 py-2 text-xs font-semibold text-p-cream transition-colors hover:bg-p-sage/22 sm:flex-none [-webkit-tap-highlight-color:transparent]"
-            >
-              Study SRS
-            </Link>
-          </div>
+      <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-p-sand/15 bg-p-navy-deep/80 px-3 py-2.5 sm:px-4">
+        <div className="min-w-0">
+          <BackToLibraryLink className="-ml-1 py-1 text-[11px] sm:text-xs" />
+          <p className="truncate text-xs font-medium text-p-sand-dim">
+            {mode === "sections" ? "Reader (sections)" : "Book view"}
+          </p>
+          <h1 className="truncate text-sm font-semibold text-p-cream sm:text-base">{deckTitle}</h1>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href={`/decks/${deckId}`}
+            className="tap-scale inline-flex min-h-10 items-center justify-center rounded-xl border border-p-sand/25 bg-p-navy-mid/70 px-3 py-2 text-xs font-semibold text-p-cream transition-colors duration-150 hover:border-p-sage/35 hover:bg-p-navy/80 [-webkit-tap-highlight-color:transparent]"
+          >
+            Cards
+          </Link>
+          <Link
+            href={`/study?deck_id=${encodeURIComponent(deckId)}`}
+            className="tap-scale inline-flex min-h-10 items-center justify-center rounded-xl border border-p-sage/40 bg-p-sage/15 px-3 py-2 text-xs font-semibold text-p-cream transition-colors duration-150 hover:bg-p-sage/25 [-webkit-tap-highlight-color:transparent]"
+          >
+            Study SRS
+          </Link>
         </div>
       </header>
 
-      <div className="mx-auto flex min-h-0 w-full max-w-[1600px] flex-1 flex-col gap-3 p-3 sm:p-4 md:flex-row md:gap-4 lg:p-5">
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-0 md:grid-cols-2 md:gap-px md:bg-zinc-800">
         <section
-          className="flex min-h-[42vh] flex-1 flex-col overflow-hidden rounded-2xl border border-p-sand/12 bg-[#070a0f] shadow-inner shadow-black/30 md:min-h-0"
+          className="min-h-0 overflow-y-auto bg-zinc-950 p-3 sm:p-4"
           aria-label="PDF page text"
         >
-          <div className="shrink-0 border-b border-p-sand/10 px-4 py-2.5 sm:px-5 sm:py-3">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-p-sand-dim">
-              {unit} {page?.page_number ?? 0} · {mode === "sections" ? "extracted text" : "source text"}
-            </p>
-          </div>
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-5 sm:px-5 sm:py-6">
-            <pre className="whitespace-pre-wrap break-words font-sans text-[15px] leading-7 text-p-cream/95">
-              {page?.content ?? ""}
-            </pre>
-          </div>
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+            {unit} {page?.page_number ?? 0} · {mode === "sections" ? "extracted text" : "source text"}
+          </p>
+          <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-relaxed text-zinc-200">
+            {page?.content ?? ""}
+          </pre>
         </section>
 
         <section
-          className="flex min-h-[36vh] flex-1 flex-col overflow-hidden rounded-2xl border border-p-sand/12 bg-p-navy-mid/25 shadow-inner shadow-black/20 md:min-h-0"
+          className="flex min-h-0 flex-col overflow-y-auto border-t border-zinc-800 bg-zinc-900/40 p-3 sm:border-t-0 sm:p-4"
           aria-label="Takeaways and practice"
         >
-          <div className="shrink-0 border-b border-p-sand/10 px-4 py-2.5 sm:px-5 sm:py-3">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-p-sand-dim">
-              Key takeaways &amp; play
-            </p>
-          </div>
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-            {!summarizeAvailable ? (
-              <div className="space-y-3 px-4 py-5 text-sm leading-relaxed text-p-sand sm:px-5 sm:py-6">
-                <p>
-                  Per-section AI summaries are stored on{" "}
-                  <code className="rounded bg-black/35 px-1.5 py-0.5 text-p-cream">deck_pages</code>.
-                  After you run{" "}
-                  <code className="rounded bg-black/35 px-1.5 py-0.5 text-p-sage-bright">
-                    supabase/migrations/003_deck_pages.sql
-                  </code>{" "}
-                  and re-upload this PDF, you can summarize each page here.
-                </p>
-                <p className="text-xs text-p-sand-dim">
-                  All extracted text is in the left panel — scroll there or use Prev / Next.
-                </p>
-              </div>
-            ) : parsed ? (
-              <div className="space-y-5 px-4 py-5 text-sm sm:px-5 sm:py-6">
-                <ul className="list-disc space-y-2 pl-5 text-p-cream/95">
-                  {parsed.takeaways.map((t, i) => (
-                    <li key={i} className="leading-relaxed">
-                      {t}
-                    </li>
-                  ))}
-                </ul>
-                {parsed.spark ? (
-                  <div className="rounded-xl border border-p-sage/28 bg-p-sage/10 p-4 text-p-cream">
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-p-sage-bright/90">
-                      Memory hook
-                    </p>
-                    <p className="mt-2 leading-relaxed">{parsed.spark}</p>
-                  </div>
-                ) : null}
-                {parsed.quiz ? (
-                  <div className="rounded-xl border border-p-sand/22 bg-p-navy-deep/50 p-4 text-p-cream">
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-p-sand">
-                      Check yourself
-                    </p>
-                    <p className="mt-2 font-medium leading-relaxed">{parsed.quiz}</p>
-                  </div>
-                ) : null}
-                <button
-                  type="button"
-                  onClick={() => void summarize(true)}
-                  disabled={busy}
-                  className="tap-scale inline-flex min-h-10 items-center rounded-lg px-2 py-2 text-xs font-medium text-p-sage-bright underline decoration-p-sage/35 underline-offset-2 hover:bg-p-sage/10 hover:text-p-cream disabled:opacity-50 [-webkit-tap-highlight-color:transparent]"
-                >
-                  Regenerate this page
-                </button>
-              </div>
-            ) : (
-              <div className="flex min-h-[min(280px,45dvh)] flex-col items-center justify-center gap-5 px-5 py-10 sm:min-h-[240px] sm:px-8 sm:py-12 md:min-h-0 md:flex-1">
-                <p className="max-w-md text-center text-sm leading-relaxed text-p-sand-dim md:text-left">
-                  Summarize this page for bullets, a memorable hook, and one check-yourself question
-                  (uses Gemini on the server).
-                </p>
-                <button
-                  type="button"
-                  onClick={() => void summarize()}
-                  disabled={busy}
-                  className="tap-scale inline-flex min-h-12 min-w-[12rem] items-center justify-center rounded-xl bg-gradient-to-r from-p-sage to-p-sage-muted px-6 py-3 text-sm font-semibold text-p-navy shadow-md shadow-black/25 hover:brightness-105 disabled:opacity-50 [-webkit-tap-highlight-color:transparent]"
-                >
-                  {busy ? "Working…" : "Summarize this page"}
-                </button>
-              </div>
-            )}
-            {err ? (
-              <p className="border-t border-red-900/30 bg-red-950/20 px-4 py-3 text-xs text-red-200 sm:px-5">
-                {err}
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+            Key takeaways & play
+          </p>
+          {!summarizeAvailable ? (
+            <div className="space-y-3 text-sm text-zinc-400">
+              <p>
+                Per-section AI summaries are stored on <code className="text-zinc-300">deck_pages</code>.
+                After you run <code className="text-zinc-300">supabase/migrations/003_deck_pages.sql</code>{" "}
+                and re-upload this PDF, you can summarize each page here.
               </p>
-            ) : null}
-          </div>
+              <p className="text-xs text-zinc-500">All extracted text is on the left — scroll or use Prev / Next.</p>
+            </div>
+          ) : parsed ? (
+            <div className="space-y-4 text-sm">
+              <ul className="list-disc space-y-1 pl-4 text-zinc-200">
+                {parsed.takeaways.map((t, i) => (
+                  <li key={i}>{t}</li>
+                ))}
+              </ul>
+              {parsed.spark ? (
+                <div className="rounded-xl border border-p-sage/30 bg-p-sage/10 p-3 text-p-cream">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-p-sage-bright/90">
+                    Memory hook
+                  </p>
+                  <p className="mt-1 leading-relaxed">{parsed.spark}</p>
+                </div>
+              ) : null}
+              {parsed.quiz ? (
+                <div className="rounded-xl border border-p-sand/25 bg-p-navy-mid/60 p-3 text-p-cream">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-p-sand">
+                    Check yourself
+                  </p>
+                  <p className="mt-1 font-medium">{parsed.quiz}</p>
+                </div>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => void summarize(true)}
+                disabled={busy}
+                className="tap-scale inline-flex min-h-10 items-center rounded-lg px-1 py-2 text-xs font-medium text-p-sage-bright underline decoration-p-sage/35 underline-offset-2 hover:bg-p-sage/10 hover:text-p-cream disabled:opacity-50 [-webkit-tap-highlight-color:transparent]"
+              >
+                Regenerate this page
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-1 flex-col items-start gap-3">
+              <p className="text-sm text-zinc-500">
+                Summarize this page for bullets, a memorable hook, and one check-yourself question
+                (uses Gemini on the server).
+              </p>
+              <button
+                type="button"
+                onClick={() => void summarize()}
+                disabled={busy}
+                className="tap-scale inline-flex min-h-11 items-center justify-center rounded-xl bg-gradient-to-r from-p-sage to-p-sage-muted px-5 py-3 text-sm font-semibold text-p-navy hover:brightness-105 disabled:opacity-50 [-webkit-tap-highlight-color:transparent]"
+              >
+                {busy ? "Working…" : "Summarize this page"}
+              </button>
+            </div>
+          )}
+          {err ? <p className="mt-2 text-xs text-red-300">{err}</p> : null}
         </section>
       </div>
 
-      <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-p-sand/10 bg-p-navy-mid/50 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6">
+      <footer className="flex shrink-0 items-center justify-between gap-2 border-t border-p-sand/10 bg-p-navy/90 px-3 py-3 pb-4 sm:px-4">
         <button
           type="button"
           onClick={() => go(-1)}
           disabled={idx <= 0}
-          className="tap-scale inline-flex min-h-11 min-w-[5.5rem] items-center justify-center gap-1.5 rounded-xl border border-p-sand/20 bg-p-navy-deep/50 px-5 py-2.5 text-sm font-medium text-p-cream hover:bg-p-navy-mid disabled:opacity-40 [-webkit-tap-highlight-color:transparent]"
+          className="tap-scale inline-flex min-h-11 min-w-[5.5rem] items-center justify-center gap-1.5 rounded-xl border border-p-sand/20 px-5 py-2.5 text-sm font-medium text-p-cream hover:bg-p-navy-mid disabled:opacity-40 [-webkit-tap-highlight-color:transparent]"
         >
           <ChevronLeftIcon className="size-3.5 opacity-90" />
           Prev
         </button>
-        <span className="tabular-nums text-xs text-p-sand-dim sm:text-sm">
+        <span className="text-xs text-p-sand-dim">
           {unit} {idx + 1} / {total}
         </span>
         <button
           type="button"
           onClick={() => go(1)}
           disabled={idx >= total - 1}
-          className="tap-scale inline-flex min-h-11 min-w-[5.5rem] items-center justify-center gap-1.5 rounded-xl border border-p-sand/20 bg-p-navy-deep/50 px-5 py-2.5 text-sm font-medium text-p-cream hover:bg-p-navy-mid disabled:opacity-40 [-webkit-tap-highlight-color:transparent]"
+          className="tap-scale inline-flex min-h-11 min-w-[5.5rem] items-center justify-center gap-1.5 rounded-xl border border-p-sand/20 px-5 py-2.5 text-sm font-medium text-p-cream hover:bg-p-navy-mid disabled:opacity-40 [-webkit-tap-highlight-color:transparent]"
         >
           Next
           <ChevronRightIcon className="size-3.5 opacity-90" />
