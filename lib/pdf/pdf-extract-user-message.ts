@@ -19,7 +19,7 @@ export function pdfExtractUserMessage(err: unknown): { error: string; code: stri
       code: "PDF_INVALID",
     };
   }
-  if (/worker|canvas|wasm|offscreen|imagebitmap|skia|native/i.test(m)) {
+  if (/worker|canvas|wasm|offscreen|imagebitmap|skia|native|standardfont|fontdata|cmap|font\s*face/i.test(m)) {
     return {
       error:
         "The PDF engine hit a server-side error on this file. Try re-exporting the PDF, or split into a smaller document.",

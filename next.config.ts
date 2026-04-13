@@ -1,8 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /** pdfjs-dist ships optional native canvas hooks — keep external on the server bundle. */
-  serverExternalPackages: ["pdfjs-dist", "@napi-rs/canvas"],
+  /** pdf-parse / pdfjs-dist pull optional native bits — keep external on the server bundle. */
+  serverExternalPackages: ["pdf-parse", "pdfjs-dist", "@napi-rs/canvas"],
 };
 
 export default nextConfig;
