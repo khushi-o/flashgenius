@@ -1,4 +1,5 @@
 import { maxPdfPagesStored } from "@/lib/constants/uploads";
+import { slicePdfFromDetectedHeader } from "@/lib/pdf/is-pdf";
 
 export type PdfPageText = { pageNumber: number; text: string };
 
@@ -64,18 +65,28 @@ type TextResultLike = {
 };
 
 /**
- * Same stack you had before pdf-parse was removed — many PDFs extract better here than
- * with pdf.js alone on serverless.
+ * pdf-parse (v2) wraps the same pdf.js engine with tuned text extraction — historically this
+ * app relied on it first. Pass serverless-friendly `getDocument` options through `LoadParameters`.
  */
 async function extractWithPdfParse(buffer: Buffer): Promise<{ fullText: string; pages: PdfPageText[] } | null> {
-  let parser: { getText: (o: { first: number }) => Promise<unknown>; destroy?: () => Promise<void> } | undefined;
+  let parser: { getText: (o: { first: number }) => Promise<unknown>; destroy: () => Promise<void> } | undefined;
   try {
     const { PDFParse } = await import("pdf-parse");
+    PDFParse.setWorker("");
+
     type ParserInstance = InstanceType<typeof PDFParse>;
-    parser = new PDFParse({ data: buffer }) as ParserInstance;
+    parser = new PDFParse({
+      data: buffer,
+      verbosity: 0,
+      useSystemFonts: true,
+      isEvalSupported: false,
+      useWorkerFetch: false,
+      disableFontFace: true,
+    }) as ParserInstance;
+
     const pageCap = Math.min(maxPdfPagesStored(), 500);
     const result = (await parser.getText({ first: pageCap })) as TextResultLike;
-    const fullText = (result.text || "").trim();
+    let fullText = (result.text || "").trim();
     const total =
       typeof result.total === "number" && Number.isFinite(result.total) && result.total > 0
         ? result.total
@@ -109,27 +120,44 @@ async function extractWithPdfParse(buffer: Buffer): Promise<{ fullText: string; 
       }
     }
 
+    if (pages.length === 0 && fullText.length > 0) {
+      pages.push({ pageNumber: 1, text: fullText });
+    } else if (pages.length > 0 && fullText.length === 0) {
+      fullText = pages.map((p) => p.text).join("\n\n").trim();
+    }
+
     return { fullText, pages };
   } catch (e) {
-    console.warn("[pdf] pdf-parse fallback failed or unavailable", e);
+    console.warn("[pdf] pdf-parse failed or unavailable", e);
     return null;
   } finally {
-    await parser?.destroy?.().catch(() => undefined);
+    await parser?.destroy().catch(() => undefined);
   }
 }
 
 /**
- * PDF text extraction: try pdf.js (legacy + main builds, font modes), then pdf-parse if still
- * empty or if every pdf.js attempt threw. Matches production behavior for PDFs that only
- * worked with pdf-parse before.
+ * Not every PDF under your upload size limit can yield text: scanned pages are images only
+ * unless OCR was applied. This pipeline maximizes success for digital PDFs.
+ *
+ * Order: normalize header → pdf-parse (same as legacy app) → pdf.js with two font modes.
+ * Never rethrow a pdf.js error if pdf-parse completed without throwing (avoids masking empty
+ * extractions with a generic engine error).
  */
 export async function extractPdfText(buffer: Buffer): Promise<{
   fullText: string;
   pages: PdfPageText[];
 }> {
-  /** Only set when the last pdf.js attempt threw (ignored after a later attempt completes). */
-  let lastPdfjsThrow: unknown;
+  const working = slicePdfFromDetectedHeader(buffer);
+  if (working.length < 5) {
+    return { fullText: "", pages: [] };
+  }
 
+  const fromParse = await extractWithPdfParse(working);
+  if (fromParse && isNonEmpty(fromParse)) {
+    return fromParse;
+  }
+
+  let lastPdfjsThrow: unknown;
   const pdfjsAttempts: Array<{
     label: string;
     load: () => Promise<PdfjsModule>;
@@ -150,7 +178,7 @@ export async function extractPdfText(buffer: Buffer): Promise<{
   for (const att of pdfjsAttempts) {
     try {
       const pdfjs = await att.load();
-      const out = await extractWithPdfjsModule(pdfjs, buffer, att.disableFontFace);
+      const out = await extractWithPdfjsModule(pdfjs, working, att.disableFontFace);
       lastPdfjsThrow = undefined;
       if (isNonEmpty(out)) {
         return out;
@@ -161,9 +189,8 @@ export async function extractPdfText(buffer: Buffer): Promise<{
     }
   }
 
-  const parsed = await extractWithPdfParse(buffer);
-  if (parsed && isNonEmpty(parsed)) {
-    return parsed;
+  if (fromParse !== null) {
+    return fromParse;
   }
 
   if (lastPdfjsThrow !== undefined) {
