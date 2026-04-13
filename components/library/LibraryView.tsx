@@ -11,6 +11,7 @@ import type { DeckCardStats } from "@/lib/library/card-buckets";
 import { masteryPercent } from "@/lib/library/card-buckets";
 import { splitDeckTitle, tonePresetLabel } from "@/lib/library/deck-display";
 import { LibraryGreeting } from "@/components/library/LibraryGreeting";
+import { deckRowNeutralActionClassName } from "@/components/library/deck-row-action-classes";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useId, useMemo, useState } from "react";
@@ -59,15 +60,6 @@ function statusPill(status: string) {
   if (status === "generating")
     return "rounded-full bg-amber-500/15 px-2.5 py-0.5 text-[11px] font-semibold text-amber-200";
   return "rounded-full bg-p-navy/60 px-2.5 py-0.5 text-[11px] font-semibold text-p-sand";
-}
-
-function outlineBtnClass(extra?: string) {
-  return `tap-scale inline-flex min-h-11 min-w-[2.75rem] items-center justify-center rounded-xl border border-p-sand/20 bg-p-navy-mid/50 px-4 py-2.5 text-xs font-semibold text-p-cream shadow-sm shadow-black/5 transition-[background-color,border-color,color,box-shadow,transform] duration-150 hover:border-p-sage/40 hover:bg-p-navy/75 hover:text-p-cream hover:shadow-md hover:shadow-black/15 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-p-sage/35 [-webkit-tap-highlight-color:transparent] ${extra ?? ""}`;
-}
-
-/** Same weight as Book / All cards by default; fills sage on hover (primary CTA without always shouting). */
-function studyDeckBtnClass() {
-  return "tap-scale inline-flex min-h-11 min-w-[2.75rem] items-center justify-center rounded-xl border border-p-sand/20 bg-p-navy-mid/50 px-4 py-2.5 text-xs font-semibold text-p-cream shadow-sm shadow-black/5 transition-[background-color,border-color,color,box-shadow,filter,transform] duration-150 hover:border-transparent hover:bg-gradient-to-r hover:from-p-sage hover:to-p-sage-muted hover:text-p-navy hover:shadow-md hover:shadow-black/25 hover:brightness-105 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-p-sage/40 [-webkit-tap-highlight-color:transparent]";
 }
 
 export function LibraryView({
@@ -225,17 +217,17 @@ export function LibraryView({
                   </div>
 
                   <div className="flex flex-wrap gap-2 lg:max-w-md lg:justify-end">
-                    <Link href={`/decks/${d.id}/read`} className={outlineBtnClass()}>
+                    <Link href={`/decks/${d.id}/read`} className={deckRowNeutralActionClassName()}>
                       Book
                     </Link>
                     {d.card_count > 0 ? (
-                      <Link href={`/decks/${d.id}`} className={outlineBtnClass()}>
+                      <Link href={`/decks/${d.id}`} className={deckRowNeutralActionClassName()}>
                         All cards
                       </Link>
                     ) : null}
                     <Link
                       href={`/study?deck_id=${encodeURIComponent(d.id)}`}
-                      className={studyDeckBtnClass()}
+                      className={deckRowNeutralActionClassName()}
                     >
                       Study now
                     </Link>

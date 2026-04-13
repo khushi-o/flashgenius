@@ -1,5 +1,6 @@
 "use client";
 
+import { deckRowNeutralActionClassName } from "@/components/library/deck-row-action-classes";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -74,7 +75,7 @@ export function GenerateDeckButton({
   }
 
   const btnClass = labelShort
-    ? "tap-scale inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl border border-p-sand/20 bg-p-navy-mid/60 px-4 py-2.5 text-xs font-semibold text-p-cream shadow-sm shadow-black/5 transition-[background-color,border-color,color,box-shadow,transform] duration-150 hover:border-p-sage/40 hover:bg-p-navy/80 hover:shadow-md hover:shadow-black/10 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-p-sage/35 disabled:opacity-50 [-webkit-tap-highlight-color:transparent]"
+    ? `${deckRowNeutralActionClassName()} shrink-0 disabled:opacity-50`
     : "tap-scale inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg border border-p-sage/45 bg-p-sage/15 px-4 py-2.5 text-xs font-semibold text-p-cream transition-[background-color,border-color,color] duration-150 hover:bg-p-sage/25 disabled:opacity-50 [-webkit-tap-highlight-color:transparent]";
 
   return (

@@ -4,6 +4,20 @@ import { updateDisplayName } from "@/lib/actions/profile";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
+function PencilIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function UserCircleIcon({ className }: { className?: string }) {
   return (
     <svg className={className} width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -45,29 +59,31 @@ export function LibraryGreeting({ initialDisplayName }: Props) {
 
   if (savedName && !editing) {
     return (
-      <div className="mt-1 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
-        <div className="flex min-w-0 items-start gap-3">
-          <span className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-p-sage/30 bg-p-sage/10 text-p-sage-bright">
-            <UserCircleIcon className="h-5 w-5" />
-          </span>
-          <div className="min-w-0">
+      <div className="mt-1 flex items-start gap-3">
+        <span className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-p-sage/30 bg-p-sage/10 text-p-sage-bright">
+          <UserCircleIcon className="h-5 w-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
             <h1 className="text-3xl font-semibold tracking-tight text-p-cream">
               Hey there, <span className="text-p-sage-bright">{savedName}</span>
             </h1>
-            <p className="mt-1 text-base text-p-sand-dim sm:text-lg">{"Here's your library."}</p>
+            <button
+              type="button"
+              onClick={() => {
+                setEditing(true);
+                setDraft(savedName);
+                setErr(null);
+              }}
+              className="tap-scale -ml-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-p-sand-dim transition-[background-color,color,transform] hover:bg-p-sage/15 hover:text-p-sage-bright active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-p-sage/40 [-webkit-tap-highlight-color:transparent]"
+              aria-label="Edit display name"
+              title="Edit display name"
+            >
+              <PencilIcon className="h-[1.125rem] w-[1.125rem]" />
+            </button>
           </div>
+          <p className="mt-1 text-base text-p-sand-dim sm:text-lg">{"Here's your library."}</p>
         </div>
-        <button
-          type="button"
-          onClick={() => {
-            setEditing(true);
-            setDraft(savedName);
-            setErr(null);
-          }}
-          className="tap-scale self-start text-xs font-medium text-p-sand-dim underline decoration-p-sand/40 underline-offset-2 transition-colors hover:text-p-sage-bright sm:mt-3 [-webkit-tap-highlight-color:transparent]"
-        >
-          Change
-        </button>
       </div>
     );
   }
