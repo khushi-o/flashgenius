@@ -31,12 +31,12 @@ export async function POST(_request: Request, ctx: Ctx) {
   });
 
   if (!result.ok) {
-    const status =
-      result.message.includes("GEMINI_API_KEY") ||
-      result.message.includes("missing GEMINI")
-        ? 503
-        : 400;
-    return NextResponse.json({ error: result.message }, { status });
+    const status = typeof result.httpStatus === "number" ? result.httpStatus : 400;
+    const body: { error: string; detail?: string } = { error: result.message };
+    if (typeof result.detail === "string" && result.detail.trim()) {
+      body.detail = result.detail.trim();
+    }
+    return NextResponse.json(body, { status });
   }
 
   return NextResponse.json({

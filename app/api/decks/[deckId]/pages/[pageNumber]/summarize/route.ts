@@ -78,6 +78,17 @@ export async function POST(request: Request, ctx: Ctx) {
     );
   }
 
+  const pageText = row.content?.trim() ?? "";
+  if (!pageText) {
+    return NextResponse.json(
+      {
+        error: "This page has no extracted text to summarize. Try another page or re-upload a PDF with a selectable text layer.",
+        code: "PAGE_EMPTY",
+      },
+      { status: 422 },
+    );
+  }
+
   if (refresh) {
     await supabase.from("deck_pages").update({ summary: null }).eq("id", row.id);
     row.summary = null;
@@ -98,7 +109,7 @@ export async function POST(request: Request, ctx: Ctx) {
 
   let raw: string;
   try {
-    raw = await generateGeminiText(buildPageSummaryPrompt(row.content));
+    raw = await generateGeminiText(buildPageSummaryPrompt(pageText));
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Model error.";
     return NextResponse.json({ error: "Could not generate summary.", detail: msg }, { status: 502 });

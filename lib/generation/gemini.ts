@@ -24,24 +24,33 @@ export async function generateGeminiText(prompt: string): Promise<string> {
    */
   const defaults = [
     "gemini-2.5-flash",
+    "gemini-2.5-flash-001",
     "gemini-2.5-flash-lite",
+    "gemini-2.5-flash-lite-001",
     "gemini-2.0-flash",
     "gemini-2.0-flash-001",
     "gemini-1.5-flash",
+    "gemini-1.5-flash-002",
+    "gemini-1.5-flash-8b",
   ];
   const preferred = process.env.GEMINI_MODEL?.trim();
   const models = preferred
     ? [preferred, ...defaults.filter((m) => m !== preferred)]
     : defaults;
   let lastErr: unknown;
-  for (const name of models) {
-    try {
-      const model = genAI.getGenerativeModel({ model: name });
-      const result = await model.generateContent(prompt);
-      const out = result.response.text();
-      if (out?.trim()) return out.trim();
-    } catch (e) {
-      lastErr = e;
+  for (let pass = 0; pass < 2; pass++) {
+    if (pass > 0) {
+      await new Promise((r) => setTimeout(r, 750));
+    }
+    for (const name of models) {
+      try {
+        const model = genAI.getGenerativeModel({ model: name });
+        const result = await model.generateContent(prompt);
+        const out = result.response.text();
+        if (out?.trim()) return out.trim();
+      } catch (e) {
+        lastErr = e;
+      }
     }
   }
   const tried = models.join(", ");

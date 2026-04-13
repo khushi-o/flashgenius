@@ -42,7 +42,7 @@ function normalizeRawToInsertable(r: RawCard, tonePreset: string): InsertableCar
 
 export type RunDeckGenerationResult =
   | { ok: true; inserted: number; skipped_invalid: number }
-  | { ok: false; message: string };
+  | { ok: false; message: string; httpStatus?: number; detail?: string };
 
 export async function runDeckGeneration(
   supabase: SupabaseClient,
@@ -52,7 +52,11 @@ export async function runDeckGeneration(
 
   const geminiKey = process.env.GEMINI_API_KEY?.trim();
   if (!geminiKey) {
-    return { ok: false, message: "Server is missing GEMINI_API_KEY." };
+    return {
+      ok: false,
+      message: "Server is missing GEMINI_API_KEY.",
+      httpStatus: 503,
+    };
   }
 
   const { data: deck, error: dErr } = await supabase
@@ -63,7 +67,7 @@ export async function runDeckGeneration(
     .maybeSingle();
 
   if (dErr || !deck) {
-    return { ok: false, message: "Deck not found." };
+    return { ok: false, message: "Deck not found.", httpStatus: 404 };
   }
 
   const allowed = new Set(["ready", "error", "generating"]);
@@ -71,6 +75,7 @@ export async function runDeckGeneration(
     return {
       ok: false,
       message: "Deck must finish upload and extraction (status ready) before generation.",
+      httpStatus: 400,
     };
   }
 
@@ -83,7 +88,21 @@ export async function runDeckGeneration(
     .limit(chunkLimit);
 
   if (cErr || !chunks?.length) {
-    return { ok: false, message: "No text chunks for this deck. Upload a PDF first." };
+    return {
+      ok: false,
+      message: "No text chunks for this deck. Upload a PDF first.",
+      httpStatus: 400,
+    };
+  }
+
+  const hasNonemptyChunk = chunks.some((r) => (r.content?.trim() ?? "").length > 0);
+  if (!hasNonemptyChunk) {
+    return {
+      ok: false,
+      message:
+        "No extractable text was found in this PDF's chunks. Use a PDF with a real text layer (export from the app where you wrote the notes), not a flat scan.",
+      httpStatus: 400,
+    };
   }
 
   const toneKey = tonePresetOrDefault(deck.tone_preset ?? "exam-crisp");
@@ -174,11 +193,13 @@ export async function runDeckGeneration(
         .eq("id", deckId)
         .eq("user_id", userId);
       const userMsg = lastApi
-        ? `No valid flashcards were produced. (${lastApi.slice(0, 220)})`
-        : "No valid flashcards were produced. Check GEMINI_API_KEY, model access, and that the PDF text extracted correctly.";
+        ? "No valid flashcards were produced. The model or network may have failed — see detail."
+        : "No valid flashcards were produced. The PDF text may be too thin, or every model response failed validation. Try another export or try again in a minute.";
       return {
         ok: false,
         message: userMsg,
+        httpStatus: 502,
+        detail: lastApi ? lastApi.slice(0, 400) : undefined,
       };
     }
 
@@ -208,7 +229,11 @@ export async function runDeckGeneration(
           })
           .eq("id", deckId)
           .eq("user_id", userId);
-        return { ok: false, message: "Failed to save generated cards." };
+        return {
+          ok: false,
+          message: "Failed to save generated cards.",
+          httpStatus: 500,
+        };
       }
     }
 
@@ -232,6 +257,6 @@ export async function runDeckGeneration(
       })
       .eq("id", deckId)
       .eq("user_id", userId);
-    return { ok: false, message: "Generation failed." };
+    return { ok: false, message: "Generation failed.", httpStatus: 500 };
   }
 }
