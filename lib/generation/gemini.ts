@@ -21,13 +21,16 @@ export async function generateGeminiText(prompt: string): Promise<string> {
   const genAI = new GoogleGenerativeAI(key);
   /**
    * Google AI Studio (`generativelanguage.googleapis.com`, v1beta).
-   * Do not use version-suffixed ids like `gemini-1.5-flash-002` here — many keys return 404.
+   * Omit `gemini-1.5-pro` / versioned ids — many keys get 404 on Pro or `*-00x` aliases.
    * `GEMINI_MODEL` is tried first (see your .env.local).
-   * No artificial per-call timeout: summarization/generation often needs 20–60s+; a short
-   * timeout caused false failures while the layout work was unrelated.
    * @see https://ai.google.dev/gemini-api/docs/models/gemini
    */
-  const defaults = ["gemini-2.0-flash", "gemini-2.5-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
+  const defaults = [
+    "gemini-2.0-flash",
+    "gemini-2.5-flash",
+    "gemini-2.5-flash-lite",
+    "gemini-1.5-flash",
+  ];
   const preferred = process.env.GEMINI_MODEL?.trim();
   const merged = preferred
     ? [preferred, ...defaults.filter((m) => m !== preferred)]
