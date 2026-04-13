@@ -4,6 +4,7 @@ import { isMissingDeckPagesRelationError } from "@/lib/supabase/deck-pages-error
 import { DOCX_MIME } from "@/lib/decks/upload-source-types";
 import { chunkPlainText } from "@/lib/pdf/chunk-plaintext";
 import { extractPdfText } from "@/lib/pdf/extract-text";
+import { pdfExtractUserMessage } from "@/lib/pdf/pdf-extract-user-message";
 import { isPdfBuffer } from "@/lib/pdf/is-pdf";
 import { sanitizeFilenameSegment } from "@/lib/pdf/sanitize-filename";
 import { stripNulBytes } from "@/lib/pdf/sanitize-pg-text";
@@ -247,8 +248,9 @@ export async function POST(request: Request, ctx: Ctx) {
         );
         const msg =
           extractErr instanceof Error ? extractErr.message : "PDF text extraction failed.";
+        const { error, code } = pdfExtractUserMessage(extractErr);
         return NextResponse.json(
-          { error: "PDF text extraction failed (file may be image-only).", ...devDetail(msg) },
+          { error, code, ...devDetail(msg) },
           { status: 422 },
         );
       }
@@ -293,8 +295,9 @@ export async function POST(request: Request, ctx: Ctx) {
         {
           error:
             kind === "pdf"
-              ? "No extractable text in this PDF."
+              ? "This PDF opened but has no selectable text (often scanned pages or flattened artwork). Use a digital PDF with a text layer, or run OCR first, then upload."
               : "No extractable text in this document.",
+          code: kind === "pdf" ? "PDF_EMPTY_TEXT" : "DOC_EMPTY_TEXT",
         },
         { status: 422 },
       );
