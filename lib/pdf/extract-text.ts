@@ -88,73 +88,88 @@ type TextResultLike = {
 };
 
 /**
- * pdf-parse (v2) wraps the same pdf.js engine with tuned text extraction — historically this
- * app relied on it first. Pass serverless-friendly `getDocument` options through `LoadParameters`.
+ * pdf-parse (v2) wraps pdf.js. Try **minimal** `getDocument` args first (library defaults), then
+ * explicit serverless flags — some hosts reject the extra flags for certain PDFs.
  */
 async function extractWithPdfParse(buffer: Buffer): Promise<{ fullText: string; pages: PdfPageText[] } | null> {
-  let parser: { getText: (o: { first: number }) => Promise<unknown>; destroy: () => Promise<void> } | undefined;
+  let lastErr: unknown;
   try {
     const { PDFParse } = await import("pdf-parse");
     PDFParse.setWorker("");
 
     type ParserInstance = InstanceType<typeof PDFParse>;
-    parser = new PDFParse({
-      data: buffer,
-      verbosity: 0,
-      useSystemFonts: true,
-      isEvalSupported: false,
-      useWorkerFetch: false,
-      disableFontFace: true,
-    }) as ParserInstance;
+    const variants: Array<Record<string, unknown>> = [
+      { data: buffer, verbosity: 0 },
+      {
+        data: buffer,
+        verbosity: 0,
+        useSystemFonts: true,
+        isEvalSupported: false,
+        useWorkerFetch: false,
+        disableFontFace: true,
+      },
+    ];
 
-    const pageCap = Math.min(maxPdfPagesStored(), 500);
-    const result = (await parser.getText({ first: pageCap })) as TextResultLike;
-    let fullText = (result.text || "").trim();
-    const total =
-      typeof result.total === "number" && Number.isFinite(result.total) && result.total > 0
-        ? result.total
-        : 0;
+    for (let vi = 0; vi < variants.length; vi++) {
+      let parser: ParserInstance | undefined;
+      try {
+        parser = new PDFParse(variants[vi] as never) as ParserInstance;
+        const pageCap = Math.min(maxPdfPagesStored(), 500);
+        const result = (await parser.getText({ first: pageCap })) as TextResultLike;
+        let fullText = (result.text || "").trim();
+        const total =
+          typeof result.total === "number" && Number.isFinite(result.total) && result.total > 0
+            ? result.total
+            : 0;
 
-    const pages: PdfPageText[] = [];
-    const getPageText =
-      typeof result.getPageText === "function"
-        ? (result.getPageText as (this: unknown, n: number) => string).bind(result)
-        : null;
+        const pages: PdfPageText[] = [];
+        const getPageText =
+          typeof result.getPageText === "function"
+            ? (result.getPageText as (this: unknown, n: number) => string).bind(result)
+            : null;
 
-    if (getPageText && total > 0) {
-      const nPages = Math.min(total, pageCap);
-      for (let n = 1; n <= nPages; n++) {
-        const t = (getPageText(n) || "").trim();
-        if (t.length > 0) {
-          pages.push({ pageNumber: n, text: t });
+        if (getPageText && total > 0) {
+          const nPages = Math.min(total, pageCap);
+          for (let n = 1; n <= nPages; n++) {
+            const t = (getPageText(n) || "").trim();
+            if (t.length > 0) {
+              pages.push({ pageNumber: n, text: t });
+            }
+          }
         }
+
+        if (pages.length === 0 && Array.isArray(result.pages) && result.pages.length > 0) {
+          let i = 0;
+          for (const row of result.pages) {
+            i += 1;
+            const num = typeof row.num === "number" ? row.num : i;
+            const t = (row.text || "").trim();
+            if (t.length > 0) {
+              pages.push({ pageNumber: num, text: t });
+            }
+          }
+        }
+
+        if (pages.length === 0 && fullText.length > 0) {
+          pages.push({ pageNumber: 1, text: fullText });
+        } else if (pages.length > 0 && fullText.length === 0) {
+          fullText = pages.map((p) => p.text).join("\n\n").trim();
+        }
+
+        await parser.destroy().catch(() => undefined);
+        return { fullText, pages };
+      } catch (e) {
+        lastErr = e;
+        console.warn(`[pdf] pdf-parse variant ${vi} failed`, serializeEngineError(e));
+        await parser?.destroy().catch(() => undefined);
       }
     }
 
-    if (pages.length === 0 && Array.isArray(result.pages) && result.pages.length > 0) {
-      let i = 0;
-      for (const row of result.pages) {
-        i += 1;
-        const num = typeof row.num === "number" ? row.num : i;
-        const t = (row.text || "").trim();
-        if (t.length > 0) {
-          pages.push({ pageNumber: num, text: t });
-        }
-      }
-    }
-
-    if (pages.length === 0 && fullText.length > 0) {
-      pages.push({ pageNumber: 1, text: fullText });
-    } else if (pages.length > 0 && fullText.length === 0) {
-      fullText = pages.map((p) => p.text).join("\n\n").trim();
-    }
-
-    return { fullText, pages };
-  } catch (e) {
-    console.warn("[pdf] pdf-parse failed or unavailable", e);
+    console.warn("[pdf] pdf-parse all variants failed", serializeEngineError(lastErr));
     return null;
-  } finally {
-    await parser?.destroy().catch(() => undefined);
+  } catch (e) {
+    console.warn("[pdf] pdf-parse import or setup failed", serializeEngineError(e));
+    return null;
   }
 }
 
@@ -220,6 +235,23 @@ export async function extractPdfText(buffer: Buffer): Promise<PdfExtractOutcome>
   }
 
   if (fromParse !== null) {
+    if (!isNonEmpty(fromParse) && lastPdfjsThrow !== undefined) {
+      if (isPdfExtractFatalError(lastPdfjsThrow)) {
+        throw lastPdfjsThrow instanceof Error
+          ? lastPdfjsThrow
+          : new Error(String(lastPdfjsThrow), { cause: lastPdfjsThrow });
+      }
+      console.error("[pdf] pdf-parse returned empty and pdfjs failed", {
+        err: serializeEngineError(lastPdfjsThrow),
+        bytes: working.length,
+        headerHex: working.subarray(0, Math.min(32, working.length)).toString("hex"),
+      });
+      return {
+        fullText: fromParse.fullText,
+        pages: fromParse.pages,
+        emptyReason: "engine",
+      };
+    }
     return { fullText: fromParse.fullText, pages: fromParse.pages };
   }
 
