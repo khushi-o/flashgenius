@@ -44,6 +44,16 @@ function devDetail(message: string) {
   return process.env.NODE_ENV === "development" ? { detail: message } : {};
 }
 
+function devDetailFromError(err: unknown) {
+  if (process.env.NODE_ENV !== "development") return {};
+  if (!(err instanceof Error)) return { detail: String(err) };
+  let detail = err.message;
+  const c = err.cause;
+  if (c instanceof Error) detail += ` | cause: ${c.message}`;
+  else if (c !== undefined && c !== null) detail += ` | cause: ${String(c)}`;
+  return { detail };
+}
+
 function looksDocxUpload(entry: File): boolean {
   const name = (entry.name || "").toLowerCase();
   const t = (entry.type || "").toLowerCase();
@@ -99,26 +109,24 @@ export async function POST(request: Request, ctx: Ctx) {
   } catch (e) {
     const cl = request.headers.get("content-length");
     const contentLen = cl ? Number.parseInt(cl, 10) : NaN;
-    const approxMb = Number.isFinite(contentLen)
-      ? Math.max(1, Math.round(contentLen / (1024 * 1024)))
-      : null;
-    const msg = e instanceof Error ? e.message : String(e);
+
+    // Only attribute failure to our size cap when the declared body exceeds it.
     if (Number.isFinite(contentLen) && contentLen > maxBytes) {
+      const approxMb = Math.max(1, Math.round(contentLen / (1024 * 1024)));
       return NextResponse.json(
         {
-          error: `File too large (about ${approxMb} MB; max ${maxMb} MB). Raise MAX_UPLOAD_MB in .env.local.`,
-          ...devDetail(msg),
+          error: `Upload exceeds the configured limit (about ${approxMb} MB; max ${maxMb} MB). Set MAX_UPLOAD_MB and restart the server.`,
+          ...devDetailFromError(e),
         },
         { status: 413 },
       );
     }
+
     return NextResponse.json(
       {
         error:
-          approxMb != null && approxMb > maxMb
-            ? `Upload may be too large (about ${approxMb} MB; max ${maxMb} MB). Raise MAX_UPLOAD_MB, restart the dev server, and try again.`
-            : `Could not read the upload. Max file size is ${maxMb} MB. If the file is large or you raised the limit, set MAX_UPLOAD_MB (and restart).`,
-        ...devDetail(msg),
+          "The server could not parse this upload (multipart may be invalid, truncated, or blocked by a smaller platform body limit than this app).",
+        ...devDetailFromError(e),
       },
       { status: 400 },
     );
