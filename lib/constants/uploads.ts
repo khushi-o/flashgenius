@@ -1,9 +1,9 @@
 const mb = (n: number) => n * 1024 * 1024;
 
 /** When `MAX_UPLOAD_MB` is unset, the server uses this default (see `getServerMaxUploadMb()` for UI). */
-export const DEFAULT_MAX_UPLOAD_MB = 20;
+export const DEFAULT_MAX_UPLOAD_MB = 50;
 
-/** Server-side max upload bytes (`MAX_UPLOAD_MB`, 1–500; default 20 MB). */
+/** Server-side max upload bytes (`MAX_UPLOAD_MB`, 1–500; default 50 MB). */
 export function maxUploadBytes(): number {
   const raw = process.env.MAX_UPLOAD_MB;
   const n = raw ? Number.parseInt(raw, 10) : DEFAULT_MAX_UPLOAD_MB;
