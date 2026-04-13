@@ -1,3 +1,4 @@
+import { AppLogoMark } from "@/components/app-logo";
 import { safeNextPath } from "@/lib/auth/safe-next";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
@@ -14,6 +15,23 @@ type Props = {
 };
 
 const DEFAULT_POST_LOGIN = "/decks/new?welcome=1";
+
+function PipelineChevron() {
+  return (
+    <span className="fg-login-pipeline-arrow" aria-hidden>
+      <svg viewBox="0 0 20 20" width="20" height="20">
+        <path
+          d="M7 5l6 5-6 5"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.75"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </span>
+  );
+}
 
 export default async function LoginPage({ searchParams }: Props) {
   const q = await searchParams;
@@ -37,7 +55,10 @@ export default async function LoginPage({ searchParams }: Props) {
       <div className="fg-login-grid">
         <div className="fg-login-story">
           <p className="fg-login-badge" aria-hidden>
-            <span>◆</span> Learn, not cram
+            <span className="fg-login-badge-mark">
+              <AppLogoMark size="xs" />
+            </span>
+            Learn, not cram
           </p>
           <h1>
             Turn notes into <span>cards that stick</span>
@@ -48,11 +69,11 @@ export default async function LoginPage({ searchParams }: Props) {
           </p>
           <div className="fg-login-pipeline" aria-hidden>
             <span className="fg-login-pipeline-item">PDF in</span>
-            <span className="fg-login-pipeline-arrow">→</span>
+            <PipelineChevron />
             <span className="fg-login-pipeline-item">Smart chunks</span>
-            <span className="fg-login-pipeline-arrow">→</span>
+            <PipelineChevron />
             <span className="fg-login-pipeline-item">Practice deck</span>
-            <span className="fg-login-pipeline-arrow">→</span>
+            <PipelineChevron />
             <span className="fg-login-pipeline-item">SRS reviews</span>
           </div>
         </div>

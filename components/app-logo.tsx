@@ -35,13 +35,19 @@ export function LightningMindGlyph({ className }: { className?: string }) {
 
 type AppLogoMarkProps = {
   className?: string;
-  /** Slightly larger tile (e.g. login header). */
-  size?: "md" | "sm";
+  /** `xs` = compact (badges); `sm` = nav; `md` = marketing hero. */
+  size?: "md" | "sm" | "xs";
 };
 
 export function AppLogoMark({ className = "", size = "sm" }: AppLogoMarkProps) {
-  const box = size === "md" ? "h-10 w-10 rounded-xl" : "h-9 w-9 rounded-lg";
-  const glyph = size === "md" ? "h-6 w-6" : "h-[1.35rem] w-[1.35rem]";
+  const box =
+    size === "md"
+      ? "h-10 w-10 rounded-xl"
+      : size === "xs"
+        ? "h-7 w-7 rounded-md"
+        : "h-9 w-9 rounded-lg";
+  const glyph =
+    size === "md" ? "h-6 w-6" : size === "xs" ? "h-4 w-4" : "h-[1.35rem] w-[1.35rem]";
   return (
     <span
       className={`relative flex shrink-0 items-center justify-center bg-gradient-to-br from-p-sage via-p-sand to-p-sage-bright shadow-lg shadow-black/35 ring-1 ring-inset ring-p-cream/25 ${box} ${className}`}

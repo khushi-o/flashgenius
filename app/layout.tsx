@@ -16,8 +16,8 @@ export const metadata: Metadata = {
   title: "FlashGenius",
   description: "Smart flashcards from PDFs with spaced repetition.",
   icons: {
-    icon: "/icon.svg",
-    apple: "/icon.svg",
+    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/icon.svg", type: "image/svg+xml" }],
   },
 };
 
