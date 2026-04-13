@@ -19,7 +19,8 @@ export async function generateGeminiText(prompt: string): Promise<string> {
   /**
    * Stable ids for Google AI Studio (`generativelanguage.googleapis.com`).
    * Do not use `*-latest` for 1.5 (often 404 on v1beta). Do not rely on `gemini-1.5-pro`
-   * for all keys (many projects get 404). Order: newest GA flash first.
+   * for all keys (many projects get 404). Only use ids that `models.list` returns for
+   * your key — e.g. `gemini-1.5-flash-8b` is not available on this API (404).
    * @see https://ai.google.dev/gemini-api/docs/models/gemini
    */
   const defaults = [
@@ -31,7 +32,6 @@ export async function generateGeminiText(prompt: string): Promise<string> {
     "gemini-2.0-flash-001",
     "gemini-1.5-flash",
     "gemini-1.5-flash-002",
-    "gemini-1.5-flash-8b",
   ];
   const preferred = process.env.GEMINI_MODEL?.trim();
   const models = preferred
