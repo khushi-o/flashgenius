@@ -8,7 +8,7 @@ import { isMissingDeckPagesRelationError } from "@/lib/supabase/deck-pages-error
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 type Ctx = { params: Promise<{ deckId: string; pageNumber: string }> };
 

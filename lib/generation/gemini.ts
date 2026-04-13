@@ -9,28 +9,8 @@ function normalizeGeminiApiKey(raw: string | undefined): string | null {
   return k || null;
 }
 
-/** Bound each model attempt so /summarize stays under route maxDuration (e.g. 60s on Vercel). */
-const PER_MODEL_TIMEOUT_MS = 11_000;
-/** Hard cap — worst case ~4×11s ≈ 44s before other work. */
-const MAX_MODEL_ATTEMPTS = 4;
-
-function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const t = setTimeout(() => {
-      reject(new Error(`${label} timed out after ${ms}ms`));
-    }, ms);
-    promise.then(
-      (v) => {
-        clearTimeout(t);
-        resolve(v);
-      },
-      (e) => {
-        clearTimeout(t);
-        reject(e);
-      },
-    );
-  });
-}
+/** Max model ids to try (avoids endless fallbacks if every call fails). */
+const MAX_MODEL_ATTEMPTS = 8;
 
 export async function generateGeminiText(prompt: string): Promise<string> {
   const key = normalizeGeminiApiKey(process.env.GEMINI_API_KEY);
@@ -40,9 +20,11 @@ export async function generateGeminiText(prompt: string): Promise<string> {
 
   const genAI = new GoogleGenerativeAI(key);
   /**
-   * Fallback list for Google AI Studio keys (`generativelanguage.googleapis.com`, v1beta).
-   * Avoid version-suffixed ids like `gemini-1.5-flash-002` — many keys get 404 on those.
-   * Set GEMINI_MODEL to the first id that works for your project (see ListModels in the API docs).
+   * Google AI Studio (`generativelanguage.googleapis.com`, v1beta).
+   * Do not use version-suffixed ids like `gemini-1.5-flash-002` here — many keys return 404.
+   * `GEMINI_MODEL` is tried first (see your .env.local).
+   * No artificial per-call timeout: summarization/generation often needs 20–60s+; a short
+   * timeout caused false failures while the layout work was unrelated.
    * @see https://ai.google.dev/gemini-api/docs/models/gemini
    */
   const defaults = ["gemini-2.0-flash", "gemini-2.5-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
@@ -56,11 +38,7 @@ export async function generateGeminiText(prompt: string): Promise<string> {
   for (const name of models) {
     try {
       const model = genAI.getGenerativeModel({ model: name });
-      const result = await withTimeout(
-        model.generateContent(prompt),
-        PER_MODEL_TIMEOUT_MS,
-        name,
-      );
+      const result = await model.generateContent(prompt);
       const out = result.response.text();
       if (out?.trim()) return out.trim();
     } catch (e) {
@@ -71,6 +49,6 @@ export async function generateGeminiText(prompt: string): Promise<string> {
   const base =
     lastErr instanceof Error ? lastErr.message : "Gemini returned no text from any model.";
   throw new Error(
-    `${base} (tried: ${tried}). If every model 404s, set GEMINI_MODEL in .env.local to an id your key supports — see https://ai.google.dev/api/rest/v1beta/models/list`,
+    `${base} (tried: ${tried}). If you see 404s, set GEMINI_MODEL to an id your key supports — https://ai.google.dev/api/rest/v1beta/models/list`,
   );
 }
