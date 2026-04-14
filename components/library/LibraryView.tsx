@@ -14,7 +14,7 @@ import { LibraryGreeting } from "@/components/library/LibraryGreeting";
 import { deckRowNeutralActionClassName } from "@/components/library/deck-row-action-classes";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useId, useMemo, useState } from "react";
+import { useCallback, useId, useMemo, useState, useSyncExternalStore } from "react";
 
 export type LibraryDeckRow = {
   id: string;
@@ -41,22 +41,28 @@ function stemFromFilename(name: string) {
   return i > 0 ? name.slice(0, i) : name;
 }
 
-/** Formats `created_at` only after mount so SSR and the browser never disagree (no time “flip”). */
+const emptySubscribe = () => () => {};
+
+/** True only in the browser after hydration — matches server snapshot so markup stays stable. */
+function useHydrated() {
+  return useSyncExternalStore(emptySubscribe, () => true, () => false);
+}
+
+/** Formats `created_at` only after hydration so SSR and the first paint agree (no locale “flip”). */
 function LibraryDeckCreatedAt({ iso }: { iso: string }) {
-  const [label, setLabel] = useState<string | null>(null);
-  useEffect(() => {
+  const hydrated = useHydrated();
+  const label = useMemo(() => {
+    if (!hydrated) return null;
     const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return;
-    setLabel(
-      d.toLocaleString(undefined, {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-      }),
-    );
-  }, [iso]);
+    if (Number.isNaN(d.getTime())) return null;
+    return d.toLocaleString(undefined, {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  }, [hydrated, iso]);
   return (
     <span className="text-p-sand-dim">
       {label ? ` · created ${label}` : " · created …"}
