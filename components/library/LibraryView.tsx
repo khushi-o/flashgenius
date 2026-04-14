@@ -7,6 +7,7 @@ import {
   isDeckSourceUploadFile,
 } from "@/lib/decks/upload-source-types";
 import { createAndUploadDeckSource } from "@/lib/decks/upload-pdf-client";
+import { formatStableDateTime } from "@/lib/datetime/format-stable";
 import type { DeckCardStats } from "@/lib/library/card-buckets";
 import { masteryPercent } from "@/lib/library/card-buckets";
 import { splitDeckTitle, tonePresetLabel } from "@/lib/library/deck-display";
@@ -41,15 +42,7 @@ function stemFromFilename(name: string) {
 }
 
 function formatCreatedAt(iso: string | null) {
-  if (!iso) return "";
-  const d = new Date(iso);
-  return d.toLocaleString(undefined, {
-    day: "numeric",
-    month: "short",
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
+  return formatStableDateTime(iso);
 }
 
 function statusPill(status: string) {

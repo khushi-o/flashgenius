@@ -2,7 +2,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 function parseLimit(): number {
   const raw = process.env.DAILY_GENERATION_LIMIT?.trim();
-  if (raw === "" || raw == null) return 3;
+  /** Unset = off so production deploys are not capped unless you opt in. */
+  if (raw === "" || raw == null) return 0;
   const n = Number.parseInt(raw, 10);
   if (!Number.isFinite(n) || n <= 0) return 0;
   return Math.min(n, 500);
@@ -11,7 +12,7 @@ function parseLimit(): number {
 /**
  * Rough guardrail: counts `ready` decks with cards that were updated since local midnight
  * (upload-only decks with `card_count = 0` do not consume this budget).
- * Set `DAILY_GENERATION_LIMIT=0` to disable.
+ * Set `DAILY_GENERATION_LIMIT` to a positive number to enable (e.g. 3). Omit or `0` = disabled.
  */
 export async function checkGenerationQuota(
   supabase: SupabaseClient,

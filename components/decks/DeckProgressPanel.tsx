@@ -1,3 +1,4 @@
+import { formatStableDateTime } from "@/lib/datetime/format-stable";
 import type { DeckCardStats } from "@/lib/library/card-buckets";
 
 export type DeckProgressPanelProps = {
@@ -11,12 +12,8 @@ export type DeckProgressPanelProps = {
 
 function formatWhen(iso: string | null) {
   if (!iso) return "—";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleString(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
+  const s = formatStableDateTime(iso);
+  return s || "—";
 }
 
 export function DeckProgressPanel({

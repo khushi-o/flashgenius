@@ -116,7 +116,11 @@ export async function PATCH(request: Request, ctx: Ctx) {
   };
 
   const tone = typeof deck.tone_preset === "string" ? deck.tone_preset : "exam-crisp";
-  const validation = validateCard(raw, tone);
+  const patchTextUnchanged =
+    nextFront.trim() === row.front.trim() &&
+    nextBack.trim() === row.back.trim() &&
+    nextType === row.card_type;
+  const validation = validateCard(raw, tone, { patchTextUnchanged });
   if (!validation.valid) {
     return NextResponse.json(
       { error: "Validation failed.", errors: validation.errors },

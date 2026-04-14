@@ -13,6 +13,7 @@ import {
   consecutiveStudyDaysFromReviews,
   reviewsInRollingWindow,
 } from "@/lib/library/study-streak";
+import { formatStableDateTime } from "@/lib/datetime/format-stable";
 import { BackToLibraryLink } from "@/components/ui/back-to-library-link";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -21,13 +22,7 @@ import { createClient } from "@/lib/supabase/server";
 type Props = { params: Promise<{ deckId: string }> };
 
 function formatWhen(iso: string | null) {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleString(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
+  return formatStableDateTime(iso);
 }
 
 export default async function DeckDetailPage({ params }: Props) {

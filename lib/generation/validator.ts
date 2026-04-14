@@ -25,36 +25,55 @@ export interface ValidationResult {
   errors: string[];
 }
 
-export function validateCard(card: RawCard, tonePreset: string): ValidationResult {
+export type ValidateCardOptions = {
+  /**
+   * When saving an existing card without changing front/back/type, skip style rules that
+   * older or model-generated rows may not satisfy (so PATCH does not 422 on “Save” with no edits).
+   */
+  patchTextUnchanged?: boolean;
+};
+
+export function validateCard(
+  card: RawCard,
+  tonePreset: string,
+  opts?: ValidateCardOptions,
+): ValidationResult {
   const errors: string[] = [];
   const front = card.front?.trim() ?? "";
   const back = card.back?.trim() ?? "";
+  const relaxed = Boolean(opts?.patchTextUnchanged);
 
   if (!front || front.length < 10) errors.push("front too short (min 10 chars)");
   if (front.length > 300) errors.push("front too long (max 300 chars)");
   if (!back || back.length < 5) errors.push("back too short (min 5 chars)");
 
-  const backWords = back.split(/\s+/).filter(Boolean).length;
-  const maxWords = TONE_MAX_BACK_WORDS[tonePreset] ?? 60;
-  if (backWords > maxWords) {
-    errors.push(`back too long for tone preset (${backWords} words, max ${maxWords})`);
+  if (!relaxed) {
+    const backWords = back.split(/\s+/).filter(Boolean).length;
+    const maxWords = TONE_MAX_BACK_WORDS[tonePreset] ?? 60;
+    if (backWords > maxWords) {
+      errors.push(`back too long for tone preset (${backWords} words, max ${maxWords})`);
+    }
   }
 
   if (front.toLowerCase() === back.toLowerCase()) {
     errors.push("front and back are identical");
   }
 
-  const lowerBack = back.toLowerCase();
-  for (const opener of VAGUE_OPENERS) {
-    if (lowerBack.startsWith(opener)) {
-      errors.push(`back starts with vague phrase: "${opener}"`);
-      break;
+  if (!relaxed) {
+    const lowerBack = back.toLowerCase();
+    for (const opener of VAGUE_OPENERS) {
+      if (lowerBack.startsWith(opener)) {
+        errors.push(`back starts with vague phrase: "${opener}"`);
+        break;
+      }
     }
   }
 
-  const ct = card.card_type;
-  if (ct !== "cloze" && ct !== "definition") {
-    if (!front.includes("?")) errors.push("front should be phrased as a question");
+  if (!relaxed) {
+    const ct = card.card_type;
+    if (ct !== "cloze" && ct !== "definition") {
+      if (!front.includes("?")) errors.push("front should be phrased as a question");
+    }
   }
 
   return { valid: errors.length === 0, errors };
