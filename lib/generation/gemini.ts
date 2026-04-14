@@ -12,11 +12,18 @@ function normalizeGeminiApiKey(raw: string | undefined): string | null {
 /** Max model ids to try (avoids endless fallbacks if every call fails). */
 const MAX_MODEL_ATTEMPTS = 8;
 
+/**
+ * Optional idle delay *before each* `generateContent` call.
+ * Default **0**: preemptive spacing (e.g. 4500ms) makes many chunks exceed Vercel’s **504**
+ * gateway timeout on Hobby. Use retries on **429** instead; set `GEMINI_RATE_LIMIT_MS=4500`
+ * only if you have a long `maxDuration` / background worker and want to stay under RPM.
+ */
 function parseRateLimitMs(): number {
   const raw = process.env.GEMINI_RATE_LIMIT_MS?.trim();
-  if (!raw) return 4500;
+  if (raw === "" || raw == null) return 0;
   const n = Number.parseInt(raw, 10);
-  return Number.isFinite(n) && n >= 400 ? n : 4500;
+  if (!Number.isFinite(n) || n < 0) return 0;
+  return Math.min(n, 60_000);
 }
 
 function parseRetries(): number {
@@ -30,6 +37,7 @@ let lastGeminiCallAt = 0;
 
 async function waitForGeminiRateLimit(): Promise<void> {
   const ms = parseRateLimitMs();
+  if (ms <= 0) return;
   const now = Date.now();
   const elapsed = now - lastGeminiCallAt;
   if (elapsed < ms) {

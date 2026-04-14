@@ -76,12 +76,16 @@ export function GenerateDeckButton({
         return;
       }
       if (!res.ok) {
-        const base =
+        let base =
           typeof data.error === "string" ? data.error : "Generation failed.";
+        if (res.status === 504) {
+          base =
+            "Generation timed out on the server (often Vercel’s limit while the model runs). Try again, use a smaller PDF, or lower GENERATION_MAX_CHUNKS in env.";
+        }
         const detail =
           typeof data.detail === "string" && data.detail.trim()
             ? ` ${res.status}: ${data.detail.trim().slice(0, 240)}`
-            : res.status >= 500
+            : res.status >= 500 && res.status !== 504
               ? ` (HTTP ${res.status})`
               : "";
         setMsg(`${base}${detail}`.trim());
