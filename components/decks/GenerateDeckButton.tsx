@@ -20,11 +20,14 @@ export function GenerateDeckButton({
   deckId,
   status,
   labelShort,
+  existingCardCount = 0,
 }: {
   deckId: string;
   status: string;
   /** Compact label for deck cards (e.g. “Generate”). */
   labelShort?: boolean;
+  /** From `deck.card_count` / library row — used to confirm regeneration and send `force`. */
+  existingCardCount?: number;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -41,12 +44,33 @@ export function GenerateDeckButton({
     setBusy(true);
     setMsg(null);
     try {
+      const count = Math.max(0, Math.floor(existingCardCount));
+      if (count > 0) {
+        const ok = window.confirm(
+          `This deck already has ${count} cards. Regenerating will replace them and use AI quota. Continue?`,
+        );
+        if (!ok) {
+          setBusy(false);
+          return;
+        }
+      }
+
       const res = await fetch(`/api/decks/${deckId}/generate`, {
         method: "POST",
         credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ force: count > 0 }),
       });
       const data = await parseJson(res);
       setBusy(false);
+      if (res.ok && data.skipped === true) {
+        setMsg(
+          typeof data.message === "string"
+            ? data.message
+            : "Generation was skipped (deck already has cards).",
+        );
+        return;
+      }
       if (!res.ok) {
         const base =
           typeof data.error === "string" ? data.error : "Generation failed.";

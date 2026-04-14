@@ -4,7 +4,11 @@ import {
   maxChunksForGeneration,
   passBConceptBatchSize,
 } from "@/lib/constants/generation";
-import { generateGeminiText } from "./gemini";
+import {
+  generateLlmText,
+  getActiveLlmProvider,
+  missingLlmKeyMessage,
+} from "./generate-llm-text";
 import { buildPassAPrompt, buildPassBBatchPrompt, parsePassAOutput, parsePassBOutput } from "./passes";
 import { tonePresetOrDefault } from "./tone-presets";
 import type { CardType, InsertableCard, PassAConcept, RawCard } from "./types";
@@ -50,13 +54,10 @@ export async function runDeckGeneration(
 ): Promise<RunDeckGenerationResult> {
   const { deckId, userId } = params;
 
-  const geminiKey = process.env.GEMINI_API_KEY?.trim();
-  if (!geminiKey) {
-    return {
-      ok: false,
-      message: "Server is missing GEMINI_API_KEY.",
-      httpStatus: 500,
-    };
+  const provider = getActiveLlmProvider();
+  const keyMissing = missingLlmKeyMessage(provider);
+  if (keyMissing) {
+    return { ok: false, message: keyMissing, httpStatus: 500 };
   }
 
   const { data: deck, error: dErr } = await supabase
@@ -121,11 +122,11 @@ export async function runDeckGeneration(
   const accepted: InsertableCard[] = [];
   const frontsLower: string[] = [];
   let skippedInvalid = 0;
-  const geminiErrorRef: { last: string | null } = { last: null };
+  const llmErrorRef: { last: string | null } = { last: null };
 
-  function noteGeminiError(e: unknown) {
+  function noteLlmError(e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
-    if (msg) geminiErrorRef.last = msg.slice(0, 500);
+    if (msg) llmErrorRef.last = msg.slice(0, 500);
   }
 
   try {
@@ -136,9 +137,9 @@ export async function runDeckGeneration(
 
       let passARaw: string;
       try {
-        passARaw = await generateGeminiText(buildPassAPrompt(content, toneKey));
+        passARaw = await generateLlmText(buildPassAPrompt(content, toneKey));
       } catch (e) {
-        noteGeminiError(e);
+        noteLlmError(e);
         skippedInvalid += 1;
         continue;
       }
@@ -154,9 +155,9 @@ export async function runDeckGeneration(
         const batch = concepts.slice(i, i + batchSize) as PassAConcept[];
         let passBRaw: string;
         try {
-          passBRaw = await generateGeminiText(buildPassBBatchPrompt(batch, toneKey));
+          passBRaw = await generateLlmText(buildPassBBatchPrompt(batch, toneKey));
         } catch (e) {
-          noteGeminiError(e);
+          noteLlmError(e);
           skippedInvalid += batch.length;
           continue;
         }
@@ -180,10 +181,10 @@ export async function runDeckGeneration(
     }
 
     if (!accepted.length) {
-      const lastApi = geminiErrorRef.last;
+      const lastApi = llmErrorRef.last;
       const apiHint = lastApi
         ? ` API: ${lastApi.slice(0, 280)}`
-        : " No Gemini call succeeded, or every response failed JSON/validation.";
+        : " No LLM call succeeded, or every response failed JSON/validation.";
       await supabase
         .from("decks")
         .update({
@@ -198,7 +199,7 @@ export async function runDeckGeneration(
       return {
         ok: false,
         message: userMsg,
-        /** 422: deck OK but no cards passed — usually Gemini/validation; not “site down”. */
+        /** 422: deck OK but no cards passed — usually LLM/validation; not “site down”. */
         httpStatus: 422,
         detail: lastApi ? lastApi.slice(0, 400) : undefined,
       };

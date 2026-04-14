@@ -3,7 +3,7 @@
 import { ChevronLeftIcon, ChevronRightIcon } from "@/components/ui/nav-icons";
 import { BackToLibraryLink } from "@/components/ui/back-to-library-link";
 import Link from "next/link";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 export type DeckPageRow = {
   page_number: number;
@@ -72,8 +72,15 @@ export function DeckBookReader({
     [total],
   );
 
+  useEffect(() => {
+    setErr(null);
+  }, [idx]);
+
   const summarize = useCallback(async (refresh?: boolean) => {
     if (!page) return;
+    if (!refresh && parseSummary(page.summary)) {
+      return;
+    }
     setBusy(true);
     setErr(null);
     try {

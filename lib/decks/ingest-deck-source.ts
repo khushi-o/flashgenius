@@ -1,4 +1,11 @@
-import { chunkCharTarget, chunkOverlapChars, maxPdfPagesStored } from "@/lib/constants/uploads";
+import {
+  chunkCharTarget,
+  chunkOverlapChars,
+  maxChunkContentStoredChars,
+  maxChunksPerDeck,
+  maxPageContentStoredChars,
+  maxPdfPagesStored,
+} from "@/lib/constants/uploads";
 import { isMissingDeckPagesRelationError } from "@/lib/supabase/deck-pages-errors";
 import { chunkPlainText } from "@/lib/pdf/chunk-plaintext";
 import { extractPdfText } from "@/lib/pdf/extract-text";
@@ -6,13 +13,6 @@ import { pdfExtractUserMessage } from "@/lib/pdf/pdf-extract-user-message";
 import { stripNulBytes } from "@/lib/pdf/sanitize-pg-text";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
-
-function maxChunks(): number {
-  const raw = process.env.MAX_CHUNKS_PER_DECK;
-  const n = raw ? Number.parseInt(raw, 10) : 120;
-  if (!Number.isFinite(n) || n < 1) return 120;
-  return Math.min(n, 500);
-}
 
 async function setDeckError(
   supabase: SupabaseClient,
@@ -74,7 +74,8 @@ export async function finalizeDeckIngestion(args: DeckIngestArgs): Promise<NextR
 
     let text: string;
     let pageRows: { page_number: number; content: string }[] = [];
-    const maxChars = 120_000;
+    const pageTextCap = maxPageContentStoredChars();
+    const chunkStoreCap = maxChunkContentStoredChars();
     const pageCap = maxPdfPagesStored();
     let pdfEmptyReason: "engine" | undefined = undefined;
 
@@ -88,13 +89,13 @@ export async function finalizeDeckIngestion(args: DeckIngestArgs): Promise<NextR
           .slice(0, pageCap)
           .map((p) => ({
             page_number: p.pageNumber,
-            content: stripNulBytes(p.text).slice(0, maxChars),
+            content: stripNulBytes(p.text).slice(0, pageTextCap),
           }));
         if (!pageRows.length && text.length > 0) {
           pageRows = [
             {
               page_number: 1,
-              content: stripNulBytes(text).slice(0, maxChars),
+              content: stripNulBytes(text).slice(0, pageTextCap),
             },
           ];
         }
@@ -124,7 +125,7 @@ export async function finalizeDeckIngestion(args: DeckIngestArgs): Promise<NextR
       }
       text = text.trim();
       if (text.length > 0) {
-        pageRows = [{ page_number: 1, content: stripNulBytes(text).slice(0, maxChars) }];
+        pageRows = [{ page_number: 1, content: stripNulBytes(text).slice(0, pageTextCap) }];
       }
     }
 
@@ -156,7 +157,7 @@ export async function finalizeDeckIngestion(args: DeckIngestArgs): Promise<NextR
     const target = chunkCharTarget();
     const overlap = chunkOverlapChars();
     let rows = chunkPlainText(text, target, overlap);
-    const cap = maxChunks();
+    const cap = maxChunksPerDeck();
     if (rows.length > cap) {
       rows = rows.slice(0, cap).map((r, i) => ({ ...r, chunk_index: i }));
     }
@@ -190,7 +191,7 @@ export async function finalizeDeckIngestion(args: DeckIngestArgs): Promise<NextR
           slice.map((r) => ({
             deck_id: deckId,
             chunk_index: r.chunk_index,
-            content: stripNulBytes(r.content),
+            content: stripNulBytes(r.content).slice(0, chunkStoreCap),
             page_start: r.page_start,
             page_end: r.page_end,
           })),

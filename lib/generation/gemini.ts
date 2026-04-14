@@ -12,6 +12,41 @@ function normalizeGeminiApiKey(raw: string | undefined): string | null {
 /** Max model ids to try (avoids endless fallbacks if every call fails). */
 const MAX_MODEL_ATTEMPTS = 8;
 
+function parseRateLimitMs(): number {
+  const raw = process.env.GEMINI_RATE_LIMIT_MS?.trim();
+  if (!raw) return 4500;
+  const n = Number.parseInt(raw, 10);
+  return Number.isFinite(n) && n >= 400 ? n : 4500;
+}
+
+function parseRetries(): number {
+  const raw = process.env.GEMINI_MAX_RETRIES?.trim();
+  if (!raw) return 2;
+  const n = Number.parseInt(raw, 10);
+  return Number.isFinite(n) && n >= 0 && n <= 6 ? n : 2;
+}
+
+let lastGeminiCallAt = 0;
+
+async function waitForGeminiRateLimit(): Promise<void> {
+  const ms = parseRateLimitMs();
+  const now = Date.now();
+  const elapsed = now - lastGeminiCallAt;
+  if (elapsed < ms) {
+    await new Promise((r) => setTimeout(r, ms - elapsed));
+  }
+  lastGeminiCallAt = Date.now();
+}
+
+function isRateLimitError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return (
+    msg.includes("429") ||
+    msg.toLowerCase().includes("quota") ||
+    msg.includes("RESOURCE_EXHAUSTED")
+  );
+}
+
 export async function generateGeminiText(prompt: string): Promise<string> {
   const key = normalizeGeminiApiKey(process.env.GEMINI_API_KEY);
   if (!key) {
@@ -47,17 +82,31 @@ export async function generateGeminiText(prompt: string): Promise<string> {
     : defaults;
   const models = merged.slice(0, MAX_MODEL_ATTEMPTS);
 
+  const retries = parseRetries();
   let lastErr: unknown;
+
   for (const name of models) {
-    try {
-      const model = genAI.getGenerativeModel({ model: name });
-      const result = await model.generateContent(prompt);
-      const out = result.response.text();
-      if (out?.trim()) return out.trim();
-    } catch (e) {
-      lastErr = e;
+    const model = genAI.getGenerativeModel({ model: name });
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        await waitForGeminiRateLimit();
+        const result = await model.generateContent(prompt);
+        const out = result.response.text();
+        if (out?.trim()) return out.trim();
+        break;
+      } catch (e) {
+        lastErr = e;
+        if (isRateLimitError(e) && attempt < retries) {
+          const wait = 5000 * 3 ** attempt;
+          console.warn(`[gemini] rate limited on ${name}, retry ${attempt + 1} after ${wait}ms`);
+          await new Promise((r) => setTimeout(r, wait));
+          continue;
+        }
+        break;
+      }
     }
   }
+
   const tried = models.join(", ");
   const base =
     lastErr instanceof Error ? lastErr.message : "Gemini returned no text from any model.";

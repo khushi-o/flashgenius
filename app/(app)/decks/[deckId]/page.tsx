@@ -188,7 +188,11 @@ export default async function DeckDetailPage({ params }: Props) {
         >
           Read as book
         </Link>
-        <GenerateDeckButton deckId={deck.id} status={deck.status} />
+        <GenerateDeckButton
+          deckId={deck.id}
+          status={deck.status}
+          existingCardCount={deck.card_count}
+        />
         {deck.card_count > 0 ? (
           <Link
             href={`/study?deck_id=${encodeURIComponent(deck.id)}`}

@@ -1,5 +1,9 @@
 import { requireSessionUser } from "@/lib/api/route-auth";
-import { generateGeminiText } from "@/lib/generation/gemini";
+import {
+  generateLlmText,
+  getActiveLlmProvider,
+  missingLlmKeyMessage,
+} from "@/lib/generation/generate-llm-text";
 import {
   buildPageSummaryPrompt,
   parsePageSummaryOutput,
@@ -37,11 +41,13 @@ export async function POST(request: Request, ctx: Ctx) {
 
   const { supabase } = auth;
 
-  if (!process.env.GEMINI_API_KEY?.trim()) {
+  const llmProvider = getActiveLlmProvider();
+  const llmKeyMissing = missingLlmKeyMessage(llmProvider);
+  if (llmKeyMissing) {
     return NextResponse.json(
       {
-        error: "Server is missing GEMINI_API_KEY for page summaries.",
-        code: "GEMINI_KEY_MISSING",
+        error: `${llmKeyMissing} Page summaries need the active LLM key.`,
+        code: "LLM_KEY_MISSING",
       },
       { status: 500 },
     );
@@ -112,12 +118,12 @@ export async function POST(request: Request, ctx: Ctx) {
 
   let raw: string;
   try {
-    raw = await generateGeminiText(buildPageSummaryPrompt(pageText));
+    raw = await generateLlmText(buildPageSummaryPrompt(pageText));
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Model error.";
-    /** 422 = request OK but Gemini did not return usable text (timeouts, 404 model id, quota, etc.). */
+    /** 422 = request OK but the LLM did not return usable text (timeouts, 404 model id, quota, etc.). */
     return NextResponse.json(
-      { error: "Could not generate summary.", detail: msg, code: "GEMINI_UPSTREAM" },
+      { error: "Could not generate summary.", detail: msg, code: "LLM_UPSTREAM" },
       { status: 422 },
     );
   }

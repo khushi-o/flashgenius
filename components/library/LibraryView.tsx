@@ -231,7 +231,12 @@ export function LibraryView({
                     >
                       Study now
                     </Link>
-                    <GenerateDeckButton deckId={d.id} status={d.status} labelShort />
+                    <GenerateDeckButton
+                      deckId={d.id}
+                      status={d.status}
+                      labelShort
+                      existingCardCount={d.card_count}
+                    />
                     <DeleteDeckButton deckId={d.id} deckTitle={d.title} variant="outline" />
                   </div>
                 </div>
