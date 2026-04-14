@@ -7,6 +7,9 @@ import { useState } from "react";
 
 const GENERATABLE = new Set(["ready", "error", "generating"]);
 
+/** Hobby ~60s gateway; abort slightly after so we clear UI if the connection hangs without a 504 body. */
+const GENERATE_FETCH_TIMEOUT_MS = 75_000;
+
 async function parseJson(res: Response): Promise<Record<string, unknown>> {
   const text = await res.text();
   if (!text) return {};
@@ -47,26 +50,28 @@ export function GenerateDeckButton({
   async function run() {
     setBusy(true);
     setMsg(null);
-    try {
-      const count = Math.max(0, Math.floor(existingCardCount));
-      if (count > 0) {
-        const ok = window.confirm(
-          `This deck already has ${count} cards. Regenerating will replace them and use AI quota. Continue?`,
-        );
-        if (!ok) {
-          setBusy(false);
-          return;
-        }
+    const count = Math.max(0, Math.floor(existingCardCount));
+    if (count > 0) {
+      const ok = window.confirm(
+        `This deck already has ${count} cards. Regenerating will replace them and use AI quota. Continue?`,
+      );
+      if (!ok) {
+        setBusy(false);
+        return;
       }
+    }
 
+    const ac = new AbortController();
+    const tid = window.setTimeout(() => ac.abort(), GENERATE_FETCH_TIMEOUT_MS);
+    try {
       const res = await fetch(`/api/decks/${deckId}/generate`, {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ force: count > 0 }),
+        signal: ac.signal,
       });
       const data = await parseJson(res);
-      setBusy(false);
       if (res.ok && data.skipped === true) {
         setMsg(
           typeof data.message === "string"
@@ -89,6 +94,7 @@ export function GenerateDeckButton({
               ? ` (HTTP ${res.status})`
               : "";
         setMsg(`${base}${detail}`.trim());
+        router.refresh();
         return;
       }
       const inserted = typeof data.inserted === "number" ? data.inserted : 0;
@@ -100,9 +106,21 @@ export function GenerateDeckButton({
       requestAnimationFrame(() => {
         router.refresh();
       });
-    } catch {
+    } catch (e: unknown) {
+      const aborted =
+        (e instanceof DOMException && e.name === "AbortError") ||
+        (e instanceof Error && e.name === "AbortError");
+      if (aborted) {
+        setMsg(
+          "No response in time—the server may still be working or the request was cut off. Refresh the page; if the deck stays on “generating”, open the library again in a minute so it can reset.",
+        );
+      } else {
+        setMsg("Network error.");
+      }
+      router.refresh();
+    } finally {
+      window.clearTimeout(tid);
       setBusy(false);
-      setMsg("Network error.");
     }
   }
 
