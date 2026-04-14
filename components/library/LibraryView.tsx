@@ -7,7 +7,7 @@ import {
   isDeckSourceUploadFile,
 } from "@/lib/decks/upload-source-types";
 import { createAndUploadDeckSource } from "@/lib/decks/upload-pdf-client";
-import { formatStableDateTime } from "@/lib/datetime/format-stable";
+import { isGeneratingStale } from "@/lib/decks/recover-stale-generating";
 import type { DeckCardStats } from "@/lib/library/card-buckets";
 import { masteryPercent } from "@/lib/library/card-buckets";
 import { splitDeckTitle, tonePresetLabel } from "@/lib/library/deck-display";
@@ -25,6 +25,7 @@ export type LibraryDeckRow = {
   tone_preset: string;
   generation_error: string | null;
   created_at: string | null;
+  updated_at: string | null;
 };
 
 export type LibraryViewProps = {
@@ -41,8 +42,17 @@ function stemFromFilename(name: string) {
   return i > 0 ? name.slice(0, i) : name;
 }
 
-function formatCreatedAt(iso: string | null) {
-  return formatStableDateTime(iso);
+function formatCreatedAtLocal(iso: string | null) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleString(undefined, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 function statusPill(status: string) {
@@ -204,7 +214,9 @@ export function LibraryView({
                     </div>
                     <p className="mt-3 text-xs text-p-sand-dim">
                       {d.card_count} card{d.card_count === 1 ? "" : "s"}
-                      {d.created_at ? ` · created ${formatCreatedAt(d.created_at)}` : ""}
+                      {d.created_at ? (
+                        <span suppressHydrationWarning>{` · created ${formatCreatedAtLocal(d.created_at)}`}</span>
+                      ) : null}
                       {d.status === "error" && d.generation_error ? ` — ${d.generation_error}` : ""}
                     </p>
                   </div>
@@ -229,6 +241,7 @@ export function LibraryView({
                       status={d.status}
                       labelShort
                       existingCardCount={d.card_count}
+                      deckUpdatedAt={d.updated_at ?? undefined}
                     />
                     <DeleteDeckButton deckId={d.id} deckTitle={d.title} variant="outline" />
                   </div>

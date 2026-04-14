@@ -1,5 +1,6 @@
 import { LibraryView, type LibraryDeckRow } from "@/components/library/LibraryView";
 import { getServerMaxUploadMb } from "@/lib/constants/uploads";
+import { recoverStaleGeneratingDecks } from "@/lib/decks/recover-stale-generating";
 import { createClient } from "@/lib/supabase/server";
 import {
   aggregateDeckStats,
@@ -41,6 +42,7 @@ export default async function DecksPage() {
   }
 
   const list = (decks ?? []) as LibraryDeckRow[];
+  await recoverStaleGeneratingDecks(supabase, user.id, list);
 
   const { data: cardRows, error: cErr } = await supabase
     .from("cards")

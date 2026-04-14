@@ -13,7 +13,7 @@ import {
   consecutiveStudyDaysFromReviews,
   reviewsInRollingWindow,
 } from "@/lib/library/study-streak";
-import { formatStableDateTime } from "@/lib/datetime/format-stable";
+import { recoverStaleGeneratingDecks } from "@/lib/decks/recover-stale-generating";
 import { BackToLibraryLink } from "@/components/ui/back-to-library-link";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -22,7 +22,13 @@ import { createClient } from "@/lib/supabase/server";
 type Props = { params: Promise<{ deckId: string }> };
 
 function formatWhen(iso: string | null) {
-  return formatStableDateTime(iso);
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleString(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
 }
 
 export default async function DeckDetailPage({ params }: Props) {
@@ -51,6 +57,19 @@ export default async function DeckDetailPage({ params }: Props) {
   if (dErr || !deck) {
     notFound();
   }
+
+  const recoveryRow = {
+    id: deck.id,
+    status: deck.status,
+    updated_at: deck.updated_at,
+    generation_error: deck.generation_error,
+  };
+  await recoverStaleGeneratingDecks(supabase, user.id, [recoveryRow]);
+  const deckUi = {
+    ...deck,
+    status: recoveryRow.status,
+    generation_error: recoveryRow.generation_error ?? deck.generation_error,
+  };
 
   const { data: cards, error: cErr } = await supabase
     .from("cards")
@@ -110,7 +129,7 @@ export default async function DeckDetailPage({ params }: Props) {
       <div className="rounded-2xl border border-dashed border-p-sand/20 bg-p-navy-mid/40 px-6 py-12 text-center">
         <p className="text-p-cream">No flashcards in this deck yet.</p>
         <p className="mt-2 text-sm text-p-sand-dim">
-          {deck.status === "ready" || deck.status === "error" || deck.status === "generating" ? (
+          {deckUi.status === "ready" || deckUi.status === "error" || deckUi.status === "generating" ? (
             <>
               Use <strong className="text-p-sand">Generate cards</strong> above. When it
               finishes, this page updates with your fronts and backs.
@@ -133,7 +152,7 @@ export default async function DeckDetailPage({ params }: Props) {
         {list.map((c, i) => (
           <li key={c.id}>
             <DeckCardRow
-              deckId={deck.id}
+              deckId={deckUi.id}
               cardId={c.id}
               index={i + 1}
               cardType={c.card_type}
@@ -153,7 +172,7 @@ export default async function DeckDetailPage({ params }: Props) {
       dueNow={dueNow}
       streakDays={streakDays}
       reviewsLast7Days={reviewsLast7Days}
-      lastStudiedAt={deck.last_studied_at}
+      lastStudiedAt={deckUi.last_studied_at}
     />
   );
 
@@ -162,41 +181,42 @@ export default async function DeckDetailPage({ params }: Props) {
       <BackToLibraryLink className="-ml-1" />
 
       <div className="mt-4 flex flex-wrap items-start justify-between gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight text-p-cream">{deck.title}</h1>
-        <DeleteDeckButton deckId={deck.id} deckTitle={deck.title} />
+        <h1 className="text-2xl font-semibold tracking-tight text-p-cream">{deckUi.title}</h1>
+        <DeleteDeckButton deckId={deckUi.id} deckTitle={deckUi.title} />
       </div>
       <p className="mt-1 text-sm text-p-sand-dim">
-        {deck.status} · {deck.card_count} cards
-        {deck.created_at ? ` · created ${formatWhen(deck.created_at)}` : ""}
+        {deckUi.status} · {deckUi.card_count} cards
+        {deckUi.created_at ? ` · created ${formatWhen(deckUi.created_at)}` : ""}
       </p>
 
-      {deck.status === "error" && deck.generation_error ? (
+      {deckUi.status === "error" && deckUi.generation_error ? (
         <p className="mt-4 rounded-lg border border-red-900/50 bg-red-950/40 px-4 py-3 text-sm text-red-200">
-          {deck.generation_error}
+          {deckUi.generation_error}
         </p>
       ) : null}
 
       <div className="mt-6 flex flex-wrap items-center gap-2 sm:gap-3">
         <Link
-          href={`/decks/${deck.id}/read`}
+          href={`/decks/${deckUi.id}/read`}
           className="tap-scale inline-flex min-h-11 items-center justify-center rounded-xl border border-p-sand/25 bg-p-navy-mid/80 px-4 py-2.5 text-xs font-semibold text-p-cream transition-colors duration-150 hover:border-p-sage/35 hover:bg-p-navy/90 [-webkit-tap-highlight-color:transparent]"
         >
           Read as book
         </Link>
         <GenerateDeckButton
-          deckId={deck.id}
-          status={deck.status}
-          existingCardCount={deck.card_count}
+          deckId={deckUi.id}
+          status={deckUi.status}
+          existingCardCount={deckUi.card_count}
+          deckUpdatedAt={deckUi.updated_at ?? undefined}
         />
-        {deck.card_count > 0 ? (
+        {deckUi.card_count > 0 ? (
           <Link
-            href={`/study?deck_id=${encodeURIComponent(deck.id)}`}
+            href={`/study?deck_id=${encodeURIComponent(deckUi.id)}`}
             className="tap-scale inline-flex min-h-11 items-center justify-center rounded-xl border border-p-sage/40 bg-p-sage/15 px-4 py-2.5 text-xs font-semibold text-p-cream transition-colors duration-150 hover:bg-p-sage/25 [-webkit-tap-highlight-color:transparent]"
           >
             Study deck (SRS)
           </Link>
         ) : null}
-        {deck.card_count > 0 ? (
+        {deckUi.card_count > 0 ? (
           <span className="text-xs text-p-sand-dim">
             Cards: tap the card area to reveal or hide the answer.
           </span>

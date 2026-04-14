@@ -1,6 +1,7 @@
 "use client";
 
 import { deckRowNeutralActionClassName } from "@/components/library/deck-row-action-classes";
+import { isGeneratingStale } from "@/lib/decks/recover-stale-generating";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -21,6 +22,7 @@ export function GenerateDeckButton({
   status,
   labelShort,
   existingCardCount = 0,
+  deckUpdatedAt,
 }: {
   deckId: string;
   status: string;
@@ -28,6 +30,8 @@ export function GenerateDeckButton({
   labelShort?: boolean;
   /** From `deck.card_count` / library row — used to confirm regeneration and send `force`. */
   existingCardCount?: number;
+  /** `decks.updated_at` — if “generating” is older than the stale window, allow retry. */
+  deckUpdatedAt?: string | null;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -37,7 +41,7 @@ export function GenerateDeckButton({
     return null;
   }
 
-  const serverBusy = status === "generating";
+  const serverBusy = status === "generating" && !isGeneratingStale(deckUpdatedAt);
   const showWorking = busy || serverBusy;
 
   async function run() {

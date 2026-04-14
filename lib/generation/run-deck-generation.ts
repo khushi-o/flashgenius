@@ -13,6 +13,7 @@ import { buildPassAPrompt, buildPassBBatchPrompt, parsePassAOutput, parsePassBOu
 import { tonePresetOrDefault } from "./tone-presets";
 import type { CardType, InsertableCard, PassAConcept, RawCard } from "./types";
 import { CARD_TYPES } from "./types";
+import { STALE_GENERATING_MS } from "@/lib/decks/recover-stale-generating";
 import { isDuplicateFront, validateCard } from "./validator";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -60,18 +61,46 @@ export async function runDeckGeneration(
     return { ok: false, message: keyMissing, httpStatus: 500 };
   }
 
-  const { data: deck, error: dErr } = await supabase
+  const { data: deckRaw, error: dErr } = await supabase
     .from("decks")
-    .select("id, user_id, title, tone_preset, status")
+    .select("id, user_id, title, tone_preset, status, updated_at")
     .eq("id", deckId)
     .eq("user_id", userId)
     .maybeSingle();
 
-  if (dErr || !deck) {
+  if (dErr || !deckRaw) {
     return { ok: false, message: "Deck not found.", httpStatus: 404 };
   }
 
-  const allowed = new Set(["ready", "error", "generating"]);
+  let deck = deckRaw;
+
+  if (deck.status === "generating") {
+    const u = deck.updated_at ? new Date(deck.updated_at).getTime() : 0;
+    const ageMs = u ? Date.now() - u : Number.POSITIVE_INFINITY;
+    if (ageMs <= STALE_GENERATING_MS) {
+      return {
+        ok: false,
+        message:
+          "This deck is already generating. Wait a few minutes, refresh the page, or try again after it finishes.",
+        httpStatus: 409,
+      };
+    }
+    await supabase
+      .from("decks")
+      .update({ status: "ready", generation_error: null })
+      .eq("id", deckId)
+      .eq("user_id", userId);
+    const { data: refreshed } = await supabase
+      .from("decks")
+      .select("id, user_id, title, tone_preset, status, updated_at")
+      .eq("id", deckId)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (refreshed) deck = refreshed;
+    else deck = { ...deck, status: "ready" };
+  }
+
+  const allowed = new Set(["ready", "error"]);
   if (!allowed.has(deck.status)) {
     return {
       ok: false,
