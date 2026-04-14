@@ -1,11 +1,17 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
- * If the serverless function is killed (Vercel timeout) after setting `generating`,
- * the deck never returns to `ready`/`error`. Anything older than this is treated as abandoned.
- * Keep above `maxDuration` on `/api/decks/[id]/generate` (300s) with margin.
+ * After this age in `generating`, we assume the previous invocation died (e.g. Vercel ~60s gateway)
+ * and allow reclaim. Default **80s** — well below the old 6m window that made every retry **409**
+ * for minutes. Raise `STALE_GENERATING_MS` on Pro if a single run can legitimately exceed this.
  */
-export const STALE_GENERATING_MS = 6 * 60 * 1000;
+export function staleGeneratingThresholdMs(): number {
+  const raw = process.env.STALE_GENERATING_MS?.trim();
+  if (raw === "" || raw == null) return 80_000;
+  const n = Number.parseInt(raw, 10);
+  if (!Number.isFinite(n) || n < 45_000) return 80_000;
+  return Math.min(n, 60 * 60 * 1000);
+}
 
 export type DeckRecoveryRow = {
   id: string;
@@ -27,7 +33,7 @@ export async function recoverStaleGeneratingDecks(
   for (const d of decks) {
     if (d.status !== "generating" || !d.updated_at) continue;
     const t = new Date(d.updated_at).getTime();
-    if (!Number.isFinite(t) || now - t <= STALE_GENERATING_MS) continue;
+    if (!Number.isFinite(t) || now - t <= staleGeneratingThresholdMs()) continue;
 
     const { error } = await supabase
       .from("decks")
@@ -51,5 +57,5 @@ export function isGeneratingStale(updatedAtIso: string | null | undefined): bool
   if (!updatedAtIso) return false;
   const t = new Date(updatedAtIso).getTime();
   if (!Number.isFinite(t)) return false;
-  return Date.now() - t > STALE_GENERATING_MS;
+  return Date.now() - t > staleGeneratingThresholdMs();
 }

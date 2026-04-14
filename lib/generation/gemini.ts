@@ -33,6 +33,15 @@ function parseRetries(): number {
   return Number.isFinite(n) && n >= 0 && n <= 6 ? n : 2;
 }
 
+/** Pause before trying the next model id after 429s on the previous one (RPM / quota recovery). */
+function parseInterModelBackoffMs(): number {
+  const raw = process.env.GEMINI_INTER_MODEL_BACKOFF_MS?.trim();
+  if (raw === "" || raw == null) return 12_000;
+  const n = Number.parseInt(raw, 10);
+  if (!Number.isFinite(n) || n < 0) return 12_000;
+  return Math.min(n, 120_000);
+}
+
 let lastGeminiCallAt = 0;
 
 async function waitForGeminiRateLimit(): Promise<void> {
@@ -93,19 +102,25 @@ export async function generateGeminiText(prompt: string): Promise<string> {
   const retries = parseRetries();
   let lastErr: unknown;
 
-  for (const name of models) {
+  for (let mi = 0; mi < models.length; mi++) {
+    const name = models[mi];
     const model = genAI.getGenerativeModel({ model: name });
+    let gotText = false;
+
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
         await waitForGeminiRateLimit();
         const result = await model.generateContent(prompt);
         const out = result.response.text();
-        if (out?.trim()) return out.trim();
+        if (out?.trim()) {
+          gotText = true;
+          return out.trim();
+        }
         break;
       } catch (e) {
         lastErr = e;
         if (isRateLimitError(e) && attempt < retries) {
-          const wait = 5000 * 3 ** attempt;
+          const wait = 8000 * 3 ** attempt;
           console.warn(`[gemini] rate limited on ${name}, retry ${attempt + 1} after ${wait}ms`);
           await new Promise((r) => setTimeout(r, wait));
           continue;
@@ -113,12 +128,22 @@ export async function generateGeminiText(prompt: string): Promise<string> {
         break;
       }
     }
+
+    const more = mi < models.length - 1;
+    if (more && !gotText && lastErr && isRateLimitError(lastErr)) {
+      const pause = parseInterModelBackoffMs();
+      if (pause > 0) {
+        console.warn(`[gemini] waiting ${pause}ms before next model after quota/rate limit on ${name}`);
+        await new Promise((r) => setTimeout(r, pause));
+      }
+    }
   }
 
   const tried = models.join(", ");
   const base =
     lastErr instanceof Error ? lastErr.message : "Gemini returned no text from any model.";
-  throw new Error(
-    `${base} (tried: ${tried}). If you see 404s, set GEMINI_MODEL to an id your key supports — https://ai.google.dev/api/rest/v1beta/models/list`,
-  );
+  const quotaHint = lastErr && isRateLimitError(lastErr)
+    ? " Free tier: wait a few minutes, try GEMINI_MODEL=gemini-2.5-flash-lite, reduce deck size, or check quota/billing in Google AI Studio (https://aistudio.google.com/)."
+    : " If you see 404s, set GEMINI_MODEL to an id your key supports — https://ai.google.dev/api/rest/v1beta/models/list";
+  throw new Error(`${base} (tried: ${tried}).${quotaHint}`);
 }

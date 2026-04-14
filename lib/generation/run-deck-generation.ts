@@ -13,7 +13,7 @@ import { buildPassAPrompt, buildPassBBatchPrompt, parsePassAOutput, parsePassBOu
 import { tonePresetOrDefault } from "./tone-presets";
 import type { CardType, InsertableCard, PassAConcept, RawCard } from "./types";
 import { CARD_TYPES } from "./types";
-import { STALE_GENERATING_MS } from "@/lib/decks/recover-stale-generating";
+import { staleGeneratingThresholdMs } from "@/lib/decks/recover-stale-generating";
 import { isDuplicateFront, validateCard } from "./validator";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -77,7 +77,8 @@ export async function runDeckGeneration(
   if (deck.status === "generating") {
     const u = deck.updated_at ? new Date(deck.updated_at).getTime() : 0;
     const ageMs = u ? Date.now() - u : Number.POSITIVE_INFINITY;
-    if (ageMs <= STALE_GENERATING_MS) {
+    const staleAfter = staleGeneratingThresholdMs();
+    if (ageMs <= staleAfter) {
       return {
         ok: false,
         message:
@@ -222,9 +223,16 @@ export async function runDeckGeneration(
         })
         .eq("id", deckId)
         .eq("user_id", userId);
-      const userMsg = lastApi
-        ? "No valid flashcards were produced. The model or network may have failed — see detail."
-        : "No valid flashcards were produced. The PDF text may be too thin, or every model response failed validation. Try another export or try again in a minute.";
+      const quotaLike =
+        lastApi &&
+        (lastApi.includes("429") ||
+          lastApi.toLowerCase().includes("quota") ||
+          lastApi.includes("RESOURCE_EXHAUSTED"));
+      const userMsg = quotaLike
+        ? "Google Gemini hit a rate limit or quota cap (common on the free tier). Wait several minutes, try a smaller PDF, set GEMINI_MODEL=gemini-2.5-flash-lite in Vercel env, or enable billing in Google AI Studio."
+        : lastApi
+          ? "No valid flashcards were produced. The model or network may have failed — see detail."
+          : "No valid flashcards were produced. The PDF text may be too thin, or every model response failed validation. Try another export or try again in a minute.";
       return {
         ok: false,
         message: userMsg,

@@ -86,6 +86,9 @@ export function GenerateDeckButton({
         if (res.status === 504) {
           base =
             "Generation timed out on the server (often Vercel’s limit while the model runs). Try again, use a smaller PDF, or lower GENERATION_MAX_CHUNKS in env.";
+        } else if (res.status === 409) {
+          base =
+            "This deck is still marked as generating. Wait ~90s after a failed run, refresh the library page, then try again (or set STALE_GENERATING_MS on the server).";
         }
         const detail =
           typeof data.detail === "string" && data.detail.trim()
