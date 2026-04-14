@@ -1,17 +1,19 @@
 # FlashGenius — Technical architecture (overview)
 
-Complements **`docs/PLAN.md`** (build order and card-quality system). **All resolved decisions, full API shapes, SM-2 code, validator, prompts, day-by-day build, and canonical SQL** are in **[COMPLETE_REFERENCE.md](./COMPLETE_REFERENCE.md)** and **[`../supabase/migrations/001_initial_schema.sql`](../supabase/migrations/001_initial_schema.sql)**.
+**Shipped source of truth:** `supabase/migrations/*.sql`, `app/` (routes + UI), `lib/` (generation, PDF/DOCX, SM-2, Supabase helpers), and **`.env.example`**.  
+Additional planning or security write-ups may exist locally under `docs/` but are **gitignored** by this repo’s policy—do not assume they exist in every clone.
 
-This file keeps a **compact** diagram, ER sketch, and checklist; treat the complete reference as source of truth where they differ.
+This file stays **compact** (diagram, schema sketch, API index, env summary). When in doubt, read the migration SQL and the matching `lib/` modules.
 
 ---
 
 ## 1. Goals (technical)
 
-- Next.js **App Router** on **Vercel**; **Supabase** Postgres + Storage + Auth (recommended single vendor for demo).
-- **Card generation:** two-pass LLM pipeline + **validator** + **dedupe**; optional **SSE** streaming from a **Route Handler**.
-- **SRS:** SM-2 fields on each card (or normalized sibling table—**TBD**); study queue by `next_review_at`.
-- **Secrets:** LLM and service role keys **server-only**; never exposed in client bundles.
+- Next.js **App Router** (Next 16) on **Vercel**; **Supabase** Postgres + Storage + Auth (`@supabase/ssr` + `middleware.ts` session refresh).
+- **Sources:** PDF (and DOCX where supported) → text extract → **chunk** rows (`deck_chunks`); optional per-page rows (`deck_pages`) for book view + on-demand summaries.
+- **Card generation:** two-pass LLM pipeline (`lib/generation/passes.ts`, `run-deck-generation.ts`) + **validator** + **dedupe**; invoked from **`POST /api/decks/[deckId]/generate`** (JSON result, `maxDuration` 300s on that route).
+- **SRS:** SM-2 fields on `cards`; study queue via `next_review_at` (`lib/sm2.ts`, study API).
+- **Secrets:** LLM keys and service role **server-only**; never `NEXT_PUBLIC_*`.
 
 ---
 
@@ -20,32 +22,36 @@ This file keeps a **compact** diagram, ER sketch, and checklist; treat the compl
 ```mermaid
 flowchart TB
   subgraph client [Browser - Next.js]
-    UI[Pages: Home / Decks / Study / Progress]
-    SB_CLIENT[Supabase browser client - auth session]
+    UI[Marketing + App: decks / study / book reader]
+    SB_CLIENT[Supabase browser client - session cookies]
   end
   subgraph vercel [Vercel - Node server]
-    API[Route Handlers / Server Actions]
-    PDF[PDF extract + chunk]
+    MW[middleware - refresh Supabase session]
+    API[Route Handlers]
+    ING[PDF-DOCX extract + chunk + optional deck_pages]
     GEN[Pass A + Pass B + validator + dedupe]
-    SRS[SM-2 scheduler]
+    SRS[SM-2 apply on review]
   end
   subgraph supa [Supabase]
     AUTH[GoTrue Auth]
-    PG[(PostgreSQL)]
-    STOR[Storage buckets]
+    PG[(PostgreSQL + RLS)]
+    STOR[Storage bucket pdfs]
   end
   subgraph external [External - server only]
-    LLM[Gemini / Groq / etc.]
+    LLM[Gemini / Groq]
   end
+  UI --> MW
+  MW --> UI
   UI --> API
   SB_CLIENT --> AUTH
-  API --> PDF
+  API --> ING
   API --> GEN
   GEN --> LLM
   API --> SRS
   API --> PG
   API --> STOR
-  PDF --> STOR
+  ING --> STOR
+  ING --> PG
 ```
 
 ---
@@ -54,9 +60,10 @@ flowchart TB
 
 ```mermaid
 erDiagram
-  auth_users ||--o| profiles : "optional"
+  auth_users ||--|| profiles : "1:1 trigger"
   auth_users ||--o{ decks : owns
   decks ||--o{ deck_chunks : contains
+  decks ||--o{ deck_pages : optional_pages
   decks ||--o{ cards : contains
   cards ||--o{ review_events : logs
 
@@ -79,6 +86,7 @@ erDiagram
     string status
     string source_storage_path
     string source_filename
+    int card_count
     timestamptz last_studied_at
     timestamptz created_at
     timestamptz updated_at
@@ -94,9 +102,19 @@ erDiagram
     timestamptz created_at
   }
 
+  deck_pages {
+    uuid id PK
+    uuid deck_id FK
+    int page_number
+    text content
+    text summary
+    timestamptz created_at
+  }
+
   cards {
     uuid id PK
     uuid deck_id FK
+    uuid user_id FK
     string card_type
     text front
     text back
@@ -123,240 +141,146 @@ erDiagram
   }
 ```
 
-**Note:** `auth.users` is managed by Supabase Auth; `profiles` is optional (1:1) for display name / app metadata.
+**Notes**
+
+- `auth.users` is Supabase Auth; `profiles` is created for new users via trigger in `001_initial_schema.sql`.
+- `cards.user_id` simplifies RLS (owner-only policies).
+- `deck_pages` is in **`003_deck_pages.sql`** (optional until that migration is applied); UI can fall back to chunk-based “pseudo pages”.
 
 ---
 
 ## 4. PostgreSQL tables (logical schema)
 
-### 4.1 `public.profiles` (optional)
+Enums and checks match **`001_initial_schema.sql`** (and **`003_deck_pages.sql`** for pages). Highlights:
 
-| Column | Type | Constraints | Notes |
-|--------|------|-------------|--------|
-| `user_id` | `uuid` | PK, FK → `auth.users(id)` ON DELETE CASCADE | |
-| `display_name` | `text` | nullable | |
-| `updated_at` | `timestamptz` | default `now()` | |
+### `public.decks`
 
-### 4.2 `public.decks`
+- **`status`:** `draft` | `uploading` | `extracting` | `generating` | `ready` | `error` (CHECK in DB).
+- **`card_count`:** maintained by triggers on `cards` insert/delete.
+- **`generation_error`:** user-safe message when `status = error`.
 
-| Column | Type | Constraints | Notes |
-|--------|------|-------------|--------|
-| `id` | `uuid` | PK, default `gen_random_uuid()` | |
-| `user_id` | `uuid` | FK → `auth.users(id)` ON DELETE CASCADE, NOT NULL | |
-| `title` | `text` | NOT NULL | Default from filename or user input |
-| `tone_preset` | `text` | NOT NULL, default `'exam-crisp'` | Check: `exam-crisp` \| `deep-understanding` \| `quick-recall` |
-| `status` | `text` | NOT NULL, default `'draft'` | `draft` \| `uploading` \| `extracting` \| `generating` \| `ready` \| `error` (**enum TBD**) |
-| `source_storage_path` | `text` | nullable | Bucket object path |
-| `source_filename` | `text` | nullable | Original PDF name |
-| `generation_error` | `text` | nullable | User-safe message if status = error |
-| `last_studied_at` | `timestamptz` | nullable | Updated when study session completes |
-| `created_at` | `timestamptz` | default `now()` | |
-| `updated_at` | `timestamptz` | default `now()` | |
+### `public.cards`
 
-**Indexes (recommended):** `(user_id, updated_at DESC)`, `(user_id, title)` for search.
+- **`user_id`:** NOT NULL, FK to `auth.users`, aligned with RLS.
+- **`card_type`:** `definition` | `contrast` | `misconception` | `procedure` | `cloze`.
 
-### 4.3 `public.deck_chunks` (optional but recommended for two-pass + debugging)
+### `public.deck_pages` (optional migration)
 
-| Column | Type | Constraints | Notes |
-|--------|------|-------------|--------|
-| `id` | `uuid` | PK | |
-| `deck_id` | `uuid` | FK → `decks(id)` ON DELETE CASCADE | |
-| `chunk_index` | `int` | NOT NULL | Order within deck |
-| `content` | `text` | NOT NULL | Plain text for LLM |
-| `page_start` | `int` | nullable | |
-| `page_end` | `int` | nullable | |
-| `created_at` | `timestamptz` | default `now()` | |
+| Column | Notes |
+|--------|--------|
+| `page_number` | Unique per `deck_id` |
+| `content` | Extracted page text (capped at ingest; see env) |
+| `summary` | Filled on demand via summarize route |
 
-**Index:** `(deck_id, chunk_index)`.
+### `public.review_events`
 
-### 4.4 `public.cards`
+- **`grade`:** `again` | `hard` | `good` | `easy`; **`sm2_quality`** 0–5.
 
-| Column | Type | Constraints | Notes |
-|--------|------|-------------|--------|
-| `id` | `uuid` | PK | |
-| `deck_id` | `uuid` | FK → `decks(id)` ON DELETE CASCADE, NOT NULL | |
-| `card_type` | `text` | NOT NULL | `definition` \| `contrast` \| `misconception` \| `procedure` \| `cloze` |
-| `front` | `text` | NOT NULL | |
-| `back` | `text` | NOT NULL | |
-| `difficulty` | `smallint` | NOT NULL, default `2` | 1–3 |
-| `importance` | `smallint` | nullable | 1–3 from Pass A |
-| `source_page` | `int` | nullable | |
-| `source_hint` | `text` | nullable | Short locator from Pass A |
-| `ease_factor` | `numeric` | NOT NULL, default `2.5` | SM-2 |
-| `interval_days` | `int` | NOT NULL, default `0` | SM-2 |
-| `repetitions` | `int` | NOT NULL, default `0` | SM-2 |
-| `next_review_at` | `timestamptz` | nullable | `NULL` = never reviewed (new) |
-| `last_reviewed_at` | `timestamptz` | nullable | |
-| `created_at` | `timestamptz` | default `now()` | |
-| `updated_at` | `timestamptz` | default `now()` | |
-
-**Indexes:** `(deck_id, next_review_at)`, `(deck_id, created_at)` for queue + listing.
-
-### 4.5 `public.review_events` (recommended for progress charts)
-
-| Column | Type | Constraints | Notes |
-|--------|------|-------------|--------|
-| `id` | `uuid` | PK | |
-| `card_id` | `uuid` | FK → `cards(id)` ON DELETE CASCADE | |
-| `user_id` | `uuid` | FK → `auth.users(id)` | |
-| `grade` | `text` | NOT NULL | UI label: `again` \| `hard` \| `good` \| `easy` |
-| `sm2_quality` | `smallint` | NOT NULL | 0–5 after mapping |
-| `reviewed_at` | `timestamptz` | default `now()` | |
-
-**Index:** `(user_id, reviewed_at DESC)`, `(card_id, reviewed_at DESC)`.
+Full column lists: see migration files.
 
 ---
 
 ## 5. Storage (Supabase Storage)
 
-| Bucket (suggested) | Contents | Notes |
-|--------------------|----------|--------|
-| `pdfs` | Original uploads | Private; signed URL or server-only download for extraction |
+| Bucket | Contents |
+|--------|----------|
+| `pdfs` | Private uploads; path **`{user_id}/{deck_id}/...`**
 
-**RLS:** only owner can read/write objects for their `user_id` path convention, e.g. `{user_id}/{deck_id}/file.pdf`—**exact policy TBD**.
-
----
-
-## 6. Row Level Security (concept)
-
-- **`decks`:** `user_id = auth.uid()` for SELECT/INSERT/UPDATE/DELETE.  
-- **`cards` / `deck_chunks` / `review_events`:** join `decks` where `decks.user_id = auth.uid()` or duplicate `user_id` on child for simpler policies—**TBD**.  
-- Server-side generation using **service role** must **not** bypass ownership checks in code (or use locked-down Edge function)—**TBD**.
+**RLS (implemented):** insert/select/delete on `storage.objects` for bucket `pdfs` where `(storage.foldername(name))[1] = auth.uid()::text` (see `001_initial_schema.sql`).
 
 ---
 
-## 7. API surface (REST, Next.js Route Handlers)
+## 6. Row Level Security (summary)
+
+- **`profiles`:** `user_id = auth.uid()` for all operations.
+- **`decks`:** owner-only via `user_id = auth.uid()`.
+- **`deck_chunks`**, **`deck_pages`**, **`cards`**, **`review_events`:** access allowed when linked deck is owned by `auth.uid()` (policies use subselect on `decks` or `user_id` on `cards` / `review_events`).
+
+Server routes use the user-scoped Supabase client from the session (`lib/api/route-auth.ts`); service role is optional and documented in `.env.example`.
+
+---
+
+## 7. API surface (Route Handlers)
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| `POST` | `/api/decks` | Create deck (`title`, `tone_preset`) |
-| `POST` | `/api/decks/[id]/upload` | Multipart PDF → Storage + enqueue extract |
-| `POST` | `/api/decks/[id]/extract` | Internal or chained: PDF → chunks rows |
-| `POST` | `/api/decks/[id]/generate` | Run Pass A/B; **SSE** optional (`text/event-stream`) |
-| `GET` | `/api/decks` | List current user’s decks (+ due counts via aggregate **TBD**) |
-| `GET` | `/api/decks/[id]` | Deck metadata |
-| `GET` | `/api/decks/[id]/cards` | Paginated cards |
-| `PATCH` | `/api/cards/[id]` | Edit `front`, `back`, optional `difficulty` |
-| `DELETE` | `/api/cards/[id]` | Delete card |
-| `GET` | `/api/study/queue?deckId=&limit=` | Due + new mix |
-| `POST` | `/api/study/review` | Body: `cardId`, `grade` → SM-2 update + insert `review_events` |
+| `GET` | `/api/decks` | Paginated deck list + card aggregates / due counts |
+| `POST` | `/api/decks` | Create deck (`title`, optional `tone_preset`) |
+| `DELETE` | `/api/decks/[deckId]` | Delete deck, cascade DB rows, remove storage objects under prefix |
+| `POST` | `/api/decks/[deckId]/prepare-upload` | Prepare signed / path flow for upload (see implementation) |
+| `POST` | `/api/decks/[deckId]/upload` | Accept source file, extract, chunks (+ pages when migration exists) |
+| `POST` | `/api/decks/[deckId]/generate` | Run LLM generation (optional `{ "force": true }` to regenerate); rate limit + daily quota checks |
+| `PATCH` | `/api/decks/[deckId]/cards/[cardId]` | Edit card fields (validated) |
+| `DELETE` | `/api/decks/[deckId]/cards/[cardId]` | Delete card |
+| `GET` | `/api/study/queue` | Due + new mix for study session |
+| `POST` | `/api/study/review` | `cardId`, `grade` → SM-2 update + `review_events` row |
+| `POST` | `/api/decks/[deckId]/pages/[pageNumber]/summarize` | Per-page summary (requires `deck_pages`) |
 
-**Auth:** session cookie or `Authorization: Bearer` from Supabase—**TBD** (middleware).
+**Auth:** Supabase session cookies; `middleware.ts` delegates to `lib/supabase/middleware.ts` for session refresh.
 
 ---
 
-## 8. SM-2 (implementation notes)
+## 8. SM-2 (implementation)
 
-- Map UI **Again / Hard / Good / Easy** → SM-2 **quality** `q` in `0..5` (exact table **TBD**; keep monotonic: Again lowest, Easy highest).  
-- On each review: recompute `ease_factor`, `interval_days`, `repetitions`, set `next_review_at = now() + interval_days`.  
-- **New card:** `repetitions = 0`, `next_review_at` null until first introduction rules—**TBD** (Anki-style “learning” vs simple SM-2 new handling).
+Implemented in **`lib/sm2.ts`**.
 
-Reference: SuperMemo 2 algorithm (canonical descriptions online).
+- **Grade → quality `q` (0–5):** Again `0`, Hard `2`, Good `4`, Easy `5`.
+- **`applySm2Update`:** classic SM-2 interval + ease factor update; **`next_review_at`** set by API from resulting `interval_days`.
 
 ---
 
 ## 9. Environment variables
 
-See **`.env.example`** in repo root. Summary:
+See **`.env.example`**. Server tuning is centralized in:
 
-### 9.1 Supabase (typical)
-
-| Variable | Scope | Required | Notes |
-|----------|--------|----------|--------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Client + server | Yes | Public by design |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Client + server | Yes | Public; RLS must protect data |
-| `SUPABASE_SERVICE_ROLE_KEY` | Server only | Optional | Only if workers need bypass RLS—prefer avoid |
-
-### 9.2 App URL
-
-| Variable | Scope | Required | Notes |
-|----------|--------|----------|--------|
-| `NEXT_PUBLIC_APP_URL` | Client | Optional | Canonical URL for links/OAuth callbacks |
-
-### 9.3 LLM (choose one primary; others unset)
-
-| Variable | Scope | Required | Notes |
-|----------|--------|----------|--------|
-| `LLM_PROVIDER` | Server | Recommended | e.g. `gemini` \| `groq` \| `heuristic` |
-| `GEMINI_API_KEY` | Server | If Gemini | Google AI Studio |
-| `GROQ_API_KEY` | Server | If Groq | |
-| `OPENAI_API_KEY` | Server | If OpenAI | Not default for $0 path |
-
-### 9.4 Auth (if using NextAuth in addition to Supabase — **TBD**)
-
-| Variable | Scope | Notes |
-|----------|--------|--------|
-| `NEXTAUTH_URL` | Server | |
-| `NEXTAUTH_SECRET` | Server | |
-| Provider secrets | Server | e.g. `GITHUB_ID` — only if used |
-
-### 9.5 Runtime tuning (optional env overrides)
-
-| Variable | Example | Notes |
-|----------|---------|--------|
-| `MAX_UPLOAD_MB` | `20` | 1–500 MB cap in code |
-| `MAX_CHUNKS_PER_DECK` | `12` | |
-| `MAX_CARDS_PER_DECK` | `80` | |
-| `CHUNK_CHAR_TARGET` | `3200` | ~800 tokens rough |
-| `CHUNK_OVERLAP_CHARS` | `400` | |
-| `GENERATION_CHUNK_BUDGET_MS` | `4000` | Per chunk |
-| `DEDUPE_SIMILARITY_THRESHOLD` | `0.82` | |
-
-If unset, app uses code defaults (documented in one `config/constants.ts` **TBD**).
+- **`lib/constants/generation.ts`** — max cards, chunks for LLM, dedupe threshold, batch sizes.
+- **`lib/constants/uploads.ts`** — upload size, chunk/page store caps, chunking targets, max chunk rows, max PDF pages stored.
+- **`lib/constants/study.ts`** — session / daily new card limits (where applicable).
+- **`lib/generation-rate-limit.ts`** — in-memory limiter env vars for generate route.
 
 ---
 
 ## 10. Key application variables (non-env)
 
-| Name | Purpose | Determined |
-|------|---------|--------------|
-| `tone_preset` | Deck setting driving prompts + max back words | Yes — 3 values in PLAN |
-| `card_type` | Pass B prompt routing | Yes — 5 enums |
-| `DeckStatus` | Upload/generation lifecycle | Partial — extend as needed |
-| `Grade` | UI → SM-2 mapping | TBD per implementation |
-| `SessionLimits` | New cards per day / queue size | TBD |
+| Name | Purpose |
+|------|---------|
+| `tone_preset` | Drives prompts / card style (`lib/generation/tone-presets.ts`) |
+| `card_type` | Pass B routing / validation (`lib/generation/types.ts`) |
+| `DeckStatus` | Lifecycle column on `decks` |
+| `Grade` | `again` \| `hard` \| `good` \| `easy` → SM-2 quality |
 
 ---
 
 ## 11. Security checklist
 
-- No LLM key in client or `NEXT_PUBLIC_*`.  
-- Service role key only on server; never in GitHub.  
-- Validate upload MIME (`application/pdf`) and size.  
-- Rate-limit `/api/decks/*/generate` per user/IP **TBD**.
+- No LLM key in client or `NEXT_PUBLIC_*`.
+- Service role only where strictly needed; prefer RLS + user client.
+- Validate upload type and size server-side (`lib/constants/uploads.ts`, upload routes).
+- Rate-limit generation per user (`GENERATE_RATE_LIMIT_*` in `.env.example`).
 
 ---
 
-## 12. Decisions (resolved vs verify at ship time)
+## 12. Deploy / ops notes
 
-**Resolved** (see `docs/COMPLETE_REFERENCE.md`): Supabase Auth (magic link + Google), no NextAuth; SM-2 on `cards`; `user_id` on `cards` for RLS; `deck_chunks` in v1; Gemini primary + Groq fallback + `LLM_PROVIDER`; Pass B batched 3–5; JSON repair pipeline; validator soft question rule for definition/cloze; daily new + session caps via env; SQL migrations without ORM.
-
-**Still verify when you deploy**
-
-- [ ] Current Gemini / Groq **free-tier limits** in your region.  
-- [ ] Vercel **function `maxDuration`** on the streaming generate route vs `MAX_CHUNKS_PER_DECK`.  
-- [ ] Supabase **Storage** `foldername` helper availability for your project version (or replace with `split_part(name, '/', 1)` if needed).
+- Apply migrations in order (see **`README.md`**): `001_initial_schema.sql` → `002_storage_pdfs_update.sql` → `003_deck_pages.sql` when book view + summaries are required.
+- Vercel function body size limits still apply; large PDFs use patterns that avoid posting the whole file through a tiny serverless body cap (see comments in `.env.example`).
+- Tune **`maxDuration`** vs chunk count and LLM latency for `/generate`.
 
 ---
 
 ## 13. Future extensions
 
-- Redis + BullMQ for durable queues.  
-- Shared read-only decks.  
-- PWA offline study.  
-- Leitner visualization derived from SM-2 state.
+- Durable job queue (Redis / worker) for long generations.
+- Shared read-only decks, PWA offline study, richer analytics from `review_events`.
 
 ---
 
-## 14. Document map
+## 14. Document map (in-repo)
 
 | File | Role |
 |------|------|
-| `docs/COMPLETE_REFERENCE.md` | Full spec (APIs, SM-2, prompts, constants, build/deploy) |
-| `docs/SECURITY.md` | Security regulations and checklist |
-| `docs/PHASES.md` | Phased tasks + security per phase |
-| `docs/PLAN.md` | Card quality + narrative plan |
-| `docs/ARCHITECTURE.md` | This file — compact ER / overview |
-| `supabase/migrations/001_initial_schema.sql` | Canonical SQL |
-| `.gitignore` | Secret / local paths excluded from Git |
-| `.env.example` | Safe placeholder list |
+| `docs/ARCHITECTURE.md` | This overview |
+| `README.md` | Setup, migration order, product entry |
+| `supabase/migrations/*.sql` | Canonical schema + RLS + storage |
+| `.env.example` | Safe env names and defaults documentation |
+| `.gitignore` | Excludes local-only docs and secrets |
