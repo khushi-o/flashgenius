@@ -68,81 +68,82 @@ erDiagram
   cards ||--o{ review_events : logs
 
   auth_users {
-    uuid id PK
+    string id PK
     string email
   }
 
   profiles {
-    uuid user_id PK_FK
+    string user_id PK
     string display_name
-    timestamptz updated_at
+    datetime updated_at
   }
 
   decks {
-    uuid id PK
-    uuid user_id FK
+    string id PK
+    string user_id FK
     string title
     string tone_preset
     string status
     string source_storage_path
     string source_filename
     int card_count
-    timestamptz last_studied_at
-    timestamptz created_at
-    timestamptz updated_at
+    datetime last_studied_at
+    datetime created_at
+    datetime updated_at
   }
 
   deck_chunks {
-    uuid id PK
-    uuid deck_id FK
+    string id PK
+    string deck_id FK
     int chunk_index
     text content
     int page_start
     int page_end
-    timestamptz created_at
+    datetime created_at
   }
 
   deck_pages {
-    uuid id PK
-    uuid deck_id FK
+    string id PK
+    string deck_id FK
     int page_number
     text content
     text summary
-    timestamptz created_at
+    datetime created_at
   }
 
   cards {
-    uuid id PK
-    uuid deck_id FK
-    uuid user_id FK
+    string id PK
+    string deck_id FK
+    string user_id FK
     string card_type
     text front
     text back
-    smallint difficulty
-    smallint importance
+    int difficulty
+    int importance
     int source_page
     text source_hint
-    numeric ease_factor
+    float ease_factor
     int interval_days
     int repetitions
-    timestamptz next_review_at
-    timestamptz last_reviewed_at
-    timestamptz created_at
-    timestamptz updated_at
+    datetime next_review_at
+    datetime last_reviewed_at
+    datetime created_at
+    datetime updated_at
   }
 
   review_events {
-    uuid id PK
-    uuid card_id FK
-    uuid user_id FK
+    string id PK
+    string card_id FK
+    string user_id FK
     string grade
-    smallint sm2_quality
-    timestamptz reviewed_at
+    int sm2_quality
+    datetime reviewed_at
   }
 ```
 
 **Notes**
 
+- The ER diagram uses **Mermaid-friendly attribute types** (`string`, `datetime`, `int`, …) so GitHub can render it; the database still uses Postgres types (`uuid`, `timestamptz`, `smallint`, …) as defined in migrations.
 - `auth.users` is Supabase Auth; `profiles` is created for new users via trigger in `001_initial_schema.sql`.
 - `cards.user_id` simplifies RLS (owner-only policies).
 - `deck_pages` is in **`003_deck_pages.sql`** (optional until that migration is applied); UI can fall back to chunk-based “pseudo pages”.
